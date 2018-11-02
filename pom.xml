@@ -23,7 +23,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.mt.nl.torchbot.WriteReadSerialPort</mainClass>
+                            <mainClass>com.mt.nl.torchbot.HelloArduino</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
