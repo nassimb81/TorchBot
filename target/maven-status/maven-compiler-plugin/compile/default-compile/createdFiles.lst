@@ -1,0 +1,6 @@
+com\mt\nl\torchbot\services\ArduinoListenerMessagerTest.class
+com\mt\nl\torchbot\TorchBotStarter.class
+com\mt\nl\torchbot\services\FileSaver.class
+com\mt\nl\torchbot\controller\PortalToGUI.class
+com\mt\nl\torchbot\domain\SavedObject.class
+com\mt\nl\torchbot\services\FileRetriever.class
