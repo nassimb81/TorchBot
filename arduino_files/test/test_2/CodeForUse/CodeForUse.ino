@@ -6,12 +6,11 @@ String readString;
 boolean exportArray = false;
 
 void setup() {
-  Serial.begin(9600); // start serial
+  Serial.begin(115200); // start serial
   Serial.println("<Arduino is ready>");
 }
 
 void loop() {
-  delay(20);
   while (Serial.available()) {
     receiveArray();
     sendArray();
@@ -26,14 +25,14 @@ void receiveArray() {
 
   if (inChar == '\n') {
     Serial.println("In Char");
-    if (readString.equals("-32000\n")) {
-      Serial.println("hello");
-      exportArray = true;
-    }
     SEQ[ReadNr] = readString.toInt();
     Serial.print("Print in SEQ: ");
     Serial.println(SEQ[ReadNr]);
     ReadNr = ReadNr + 1;
+    if (readString.equals("-32000\n")) {
+      Serial.println("hello");
+      exportArray = true;
+    }
     readString = "";
   }
 }
@@ -41,11 +40,14 @@ void receiveArray() {
 
 void sendArray() {
   if (exportArray) {
-    Serial.println("Send Array");
-    for (int i = 0; i < 3; i++) {
+    Serial.print("Send_Array");
+    for (int i = 0; i < SEQlength; i++) {
       Serial.print(SEQ[i]);
+      if ( SEQ[i] == -32000) {
+        break;
+      }
       Serial.print(',');
     }
-    exportArray=false;
+    exportArray = false;
   }
 }

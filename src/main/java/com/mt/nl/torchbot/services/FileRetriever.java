@@ -1,7 +1,5 @@
 package com.mt.nl.torchbot.services;
 
-import java.util.regex.Pattern;
-
 public class FileRetriever {
 
     public static void main(String[] args) {

@@ -1,7 +1,7 @@
-###TORCHBOT INTRODUCTION
+### TORCHBOT INTRODUCTION
 
 
-###PACKKAGING AND RUNNING THE APPLICATION
+### PACKAGING AND RUNNING THE APPLICATION
 Build a packaged file by using one of the following commands:
     mvn clean compile assembly:single
     mvn clean install
