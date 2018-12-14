@@ -42,7 +42,7 @@ void loop() {
 
     delay(20);
     
-    Serial.println("stringComplete");
+//    Serial.println("stringComplete");
     Serial.flush();
 //       
 //    if (incomingChar != -1) { // -1 means no data is available
