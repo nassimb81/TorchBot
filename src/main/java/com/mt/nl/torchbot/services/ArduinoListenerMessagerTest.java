@@ -18,6 +18,7 @@ public class ArduinoListenerMessagerTest {
     private boolean sendingMessages = true;
     private String endArray = "-32000";
     private String sendingArray = "Send_Array";
+    OutputStream outputStream;
 
     public static void main(String[] args) {
         try {
@@ -48,35 +49,34 @@ public class ArduinoListenerMessagerTest {
         ArduinoListenerMessagerTest b = new ArduinoListenerMessagerTest();
 
         new Thread(() -> a.arduinoListener(inputStream)).start();
-        Thread.sleep(1000);
-        new Thread(() -> b.arduinoMessager(outputStream)).start();
+//        Thread.sleep(1000);
+//        new Thread(() -> b.arduinoMessager(outputStream)).start();
     }
 
-    private void arduinoMessager(OutputStream outputStream) {
+    private void arduinoMessager() {
 
         System.out.println("Messaging to arduino");
         outputStream = port.getOutputStream();
 
-        while (sendingMessages) {
-            try {
-                File file = new File("D:\\Overall_Projects\\TorchBot\\test.txt");
-                Path yourPath = file.toPath();
-                byte[] encoded = Files.readAllBytes(yourPath);
-                String textFile = new String(encoded, StandardCharsets.UTF_8);
-                List<String> commaSeparatedList = Arrays.asList(textFile.split(","));
-                String eol = "\n";
-                Thread.sleep(2000);
-                for (String line : commaSeparatedList) {
-                    if (line.matches("^-?[0-9]+$")) {
-                        System.out.println("Printing out : " + line);
-                        outputStream.write(line.getBytes());
-                        outputStream.write(eol.getBytes());
-                    }
+        try {
+            File file = new File("D:\\Overall_Projects\\TorchBot\\test.txt");
+            Path yourPath = file.toPath();
+            byte[] encoded = Files.readAllBytes(yourPath);
+            String textFile = new String(encoded, StandardCharsets.UTF_8);
+            List<String> commaSeparatedList = Arrays.asList(textFile.split(","));
+            String eol = "\n";
+            Thread.sleep(100);
+            for (String line : commaSeparatedList) {
+                if (line.matches("^-?[0-9]+$")) {
+                    System.out.println("Printing out : " + line);
+                    outputStream.write(line.getBytes());
+                    outputStream.write(eol.getBytes());
                 }
-            } catch (Exception e) {
-                System.out.println("printing out exception: " + e);
             }
+        } catch (Exception e) {
+            System.out.println("printing out exception: " + e);
         }
+
     }
 
     private void arduinoListener(InputStream inputStream) {
@@ -108,6 +108,8 @@ public class ArduinoListenerMessagerTest {
                         writer.write(stringSeq);
                         writer.close();
                         inputStream.close();
+                    } else if(result.contains("Receiving_Array")){
+                        arduinoMessager();
                     }
                 }
             } catch (Exception e) {
@@ -119,7 +121,7 @@ public class ArduinoListenerMessagerTest {
     private static SerialPort openConnection(SerialPort[] ports, SerialPort port) {
         for (SerialPort p : ports) {
             System.out.println(p.getSystemPortName());
-            if (p.getSystemPortName().equals("COM3")) {  /*for your question, <required_port> would be ttyACM0, but this can change if you reconnect the device, or if multiple devices are connected.*/
+            if (p.getSystemPortName().equals("COM5")) {  /*for your question, <required_port> would be ttyACM0, but this can change if you reconnect the device, or if multiple devices are connected.*/
                 port = p;
             }
         }

@@ -1,53 +1,70 @@
 const int SEQlength = 1999;     //2000 elements, we see it as 1000 * 2: 1000 step's
 int SEQ[SEQlength];
-int StepNr = 0;
-int ReadNr = 0;
+int ReadNr;
 String readString;
-boolean exportArray = false;
+bool exportArray = false;
+bool receiveSend = true;
+bool receiving = true;
+int timeOutReceiveFromPC;
 
 void setup() {
   Serial.begin(115200); // start serial
   Serial.println("<Arduino is ready>");
+  ReadNr = 1;
+  receiving = true;
+  exportArray = true;
 }
 
 void loop() {
-  while (Serial.available()) {
+  delay(20);
+  while (Serial.available() && receiveSend) {
     receiveArray();
+  }
+
+  if (exportArray) {
     sendArray();
   }
 }
 
 void receiveArray() {
-  char inChar = Serial.read();
-  int  inInt = inChar - '0';
-  String temp = String(inChar);
-  readString += temp;
+  while (receiving) {
+    receiveCharacter();
+  }
+}
 
-  if (inChar == '\n') {
-    Serial.println("In Char");
-    SEQ[ReadNr] = readString.toInt();
-    Serial.print("Print in SEQ: ");
-    Serial.println(SEQ[ReadNr]);
-    ReadNr = ReadNr + 1;
-    if (readString.equals("-32000\n")) {
-      Serial.println("hello");
-      exportArray = true;
+void receiveCharacter() {
+
+  timeOutReceiveFromPC = 0;
+  char inChar = Serial.read();
+  if (inChar != -1) {
+    String temp = String(inChar);
+    readString += temp;
+
+    if (inChar == '\n') {
+      Serial.println("In Char");
+      if (readString.equals("-32000\n")) {
+        receiving = false;
+        exportArray = true;
+      }
+      SEQ[ReadNr] = readString.toInt();
+      Serial.print("Print in SEQ: ");
+      Serial.println(SEQ[ReadNr]);
+      ReadNr = ReadNr + 1;
+      readString = "";
     }
-    readString = "";
   }
 }
 
 
 void sendArray() {
-  if (exportArray) {
-    Serial.print("Send_Array");
-    for (int i = 0; i < SEQlength; i++) {
-      Serial.print(SEQ[i]);
-      if ( SEQ[i] == -32000) {
-        break;
-      }
-      Serial.print(',');
+  Serial.println("Send Array");
+  for (int i = 1; i <  SEQlength; i++) {
+    Serial.println(SEQ[i]);
+    if (SEQ[i] == -32000) {
+      break;
     }
-    exportArray = false;
+    Serial.print(',');
   }
+  Serial.println("End of Array");
+  exportArray = false;
 }
