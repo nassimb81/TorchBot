@@ -181,7 +181,7 @@ void setup() {
   receiveArrayFromPC = true;
   sendArrayToPC = true;
   delay(100);
-  
+
 }
 
 
@@ -195,16 +195,16 @@ void loop() {
     Serial.print("Request_Array_From_PC");
     while (Serial && receiveArrayFromPC ) {
       //wait for serial input from the PC
-      Serial.println("Inside serial loop");
-      while (!Serial.available() && receiveArrayFromPC) {
-        Serial.println("Inside no serial data available loop");
+      while (!Serial.available() && receiveArrayFromPC) {      
         timeOutReceiveFromPC = timeOutReceiveFromPC + 1;
         delay(10);
         if (timeOutReceiveFromPC > 500) {
+          Serial.println("TIME OUT NO DATA RECEIVED");
           receiveArrayFromPC = false;
+          timeOutReceiveFromPC = 0;
         }
       }
-      
+
       if (receiveArrayFromPC) {
         receiveData();
       }
@@ -214,14 +214,14 @@ void loop() {
     StartPlayTransition = false;
 
     teller = 1;
-//    do {
-//      ReadStepData(teller);
-//      Serial.print("C1 and C2: ");
-//      Serial.print(StepDataC1);
-//      Serial.print("  ");
-//      Serial.println(StepDataC2);
-//      teller = teller + 1;
-//    } while (StepDataC1 != -32000 & teller < 400);
+    //    do {
+    //      ReadStepData(teller);
+    //      Serial.print("C1 and C2: ");
+    //      Serial.print(StepDataC1);
+    //      Serial.print("  ");
+    //      Serial.println(StepDataC2);
+    //      teller = teller + 1;
+    //    } while (StepDataC1 != -32000 & teller < 400);
     StepNr = 1;     //start from the 'top'
     ReadStepData(StepNr);
     if (StepDataC1 == -31000) {
