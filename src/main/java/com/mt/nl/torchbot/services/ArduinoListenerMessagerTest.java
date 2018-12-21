@@ -29,7 +29,7 @@ public class ArduinoListenerMessagerTest {
         }
     }
 
-    private static void run() throws InterruptedException {
+    private static void run() throws InterruptedException, IOException {
         SerialPort[] ports = SerialPort.getCommPorts();
 
         try {
@@ -113,7 +113,7 @@ public class ArduinoListenerMessagerTest {
                         writer.close();
                         inputStream.close();
                     } else if (result.contains("Request_Array_From_PC")) {
-                        System.out.println("Arduino expects to get an array sending array to arduino");
+                        System.out.println("Arduino expects to get an array; sending array to arduino");
                         arduinoMessager();
                         inputStream.close();
                     }

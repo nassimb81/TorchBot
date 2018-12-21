@@ -128,6 +128,7 @@ bool receiveArrayFromPC;
 bool sendArrayToPC;
 int ReadNr;
 int timeOutReceiveFromPC = 0;
+bool pcConnected = false;
 
 int teller;
 
@@ -179,6 +180,8 @@ void setup() {
   //initialization for variables serial communication
   receiveArrayFromPC = true;
   sendArrayToPC = true;
+  delay(100);
+  
 }
 
 
@@ -188,26 +191,37 @@ void loop() {
     //get array from RespPi (ALLWAYS?: no stand alone operation possible....,but how to solve this elegantly? (timeout?)
     //go to startpoint (with moderate speed), set speed to value from Array
     // Only goes into receiveArray when a Byte is send
+    receiveArrayFromPC = true;
     Serial.print("Request_Array_From_PC");
-    while (receiveArrayFromPC) {
-      //      receiveArray();
-      receiveCharacter();
-//      delay(100);
-//      timeOutReceiveFromPC = timeOutReceiveFromPC + 1;
+    while (Serial && receiveArrayFromPC ) {
+      //wait for serial input from the PC
+      Serial.println("Inside serial loop");
+      while (!Serial.available() && receiveArrayFromPC) {
+        Serial.println("Inside no serial data available loop");
+        timeOutReceiveFromPC = timeOutReceiveFromPC + 1;
+        delay(10);
+        if (timeOutReceiveFromPC > 500) {
+          receiveArrayFromPC = false;
+        }
+      }
+      
+      if (receiveArrayFromPC) {
+        receiveData();
+      }
     }
     //Serial.println("StartPlayTransition");
 
     StartPlayTransition = false;
 
     teller = 1;
-    do {
-      ReadStepData(teller);
-      Serial.print("C1 and C2: ");
-      Serial.print(StepDataC1);
-      Serial.print("  ");
-      Serial.println(StepDataC2);
-      teller = teller + 1;
-    } while (StepDataC1 != -32000 & teller < 400);
+//    do {
+//      ReadStepData(teller);
+//      Serial.print("C1 and C2: ");
+//      Serial.print(StepDataC1);
+//      Serial.print("  ");
+//      Serial.println(StepDataC2);
+//      teller = teller + 1;
+//    } while (StepDataC1 != -32000 & teller < 400);
     StepNr = 1;     //start from the 'top'
     ReadStepData(StepNr);
     if (StepDataC1 == -31000) {
@@ -974,18 +988,18 @@ void CondPulseEtc_RT() {                      //motor pulses if EndSwitches NOT 
 // Note if the string is not an integer (+/-) 0 will be added to the array, from the java service this has been taken into consideration
 // and only integers will be send to the arduino.
 //void receiveArray() {
-//  while (Serial.available() && receiveArrayFromPC) {
+//  while (Serial.available()) {
 //    receiveCharacter();
 //  }
 //}
 
-void receiveCharacter() {
+void receiveData() {
   char inChar = Serial.read();
   if (inChar != -1) {
     timeOutReceiveFromPC = 0;
     String temp = String(inChar);
     readString += temp;
-   
+
     if (inChar == '\n') {
       Serial.println("ReadString: ");
       Serial.println(readString);
