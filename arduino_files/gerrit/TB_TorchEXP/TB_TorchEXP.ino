@@ -187,25 +187,25 @@ void loop() {
     //get array from RespPi (ALLWAYS?: no stand alone operation possible....,but how to solve this elegantly? (timeout?)
     //go to startpoint (with moderate speed), set speed to value from Array
     // Only goes into receiveArray when a Byte is send
-    while (timeOutReceiveFromPC < 500 && receiveArrayFromPC) {
-      Serial.print("Receiving_Array");
-      receiveArray();
-      delay(100);
-      timeOutReceiveFromPC = timeOutReceiveFromPC + 1;
-    }
+//    while (timeOutReceiveFromPC < 500 && receiveArrayFromPC) {
+//      Serial.print("Receiving_Array");
+//      receiveArray();
+//      delay(100);
+//      timeOutReceiveFromPC = timeOutReceiveFromPC + 1;
+//    }
     //Serial.println("StartPlayTransition");
 
     StartPlayTransition = false;
 
     teller = 1;
-    //      do{
-    //        ReadStepData(teller);
-    //        Serial.print("C1 and C2: ");
-    //        Serial.print(StepDataC1);
-    //        Serial.print("  ");
-    //        Serial.println(StepDataC2);
-    //        teller = teller + 1;
-    //      }while(StepDataC1 != -32000 || teller > 400);
+          do{
+            ReadStepData(teller);
+            Serial.print("C1 and C2: ");
+            Serial.print(StepDataC1);
+            Serial.print("  ");
+            Serial.println(StepDataC2);
+            teller = teller + 1;
+          }while(StepDataC1 != -32000 & teller < 400);
     StepNr = 1;     //start from the 'top'
     ReadStepData(StepNr);
     if (StepDataC1 == -31000) {
@@ -254,12 +254,12 @@ void loop() {
       Ypos = (YposLong + 2) >> 2;
       Zpos = (ZposLong + 2) >> 2;
       WriteArray(Ypos, Zpos);
-      WriteArray(-32000, 0); //marking the end of a Sequence (Array)
+    }
+    WriteArray(-32000, 0); //marking the end of a Sequence (Array)
       //write Array to PC (if connected)
       while (sendArrayToPC) {
         sendArray();
       }
-    }
     //just stay where you are!
     //Serial.println("StopRecTransition ended");
   } 
@@ -603,6 +603,10 @@ void EventHandling() {
     } 
     else if (State == 15) {        //STOP and start waiting, write position
       RealTimeStop();                     //** eerst gecontroleerd stoppen
+      if (TperiodWrite != Tperiod) {  //only write T if changed
+        WriteArray(-30004, Tperiod); //de snelheid wordt hier niet meer veranderd
+        TperiodWrite = Tperiod;     //we stoppen altijd tussendoor
+      }
       TStartWaiting = millis();
       Ypos = (YposLong + 2) >> 2;
       Zpos = (ZposLong + 2) >> 2;
