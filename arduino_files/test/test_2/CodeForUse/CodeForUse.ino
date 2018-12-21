@@ -65,6 +65,5 @@ void sendArray() {
     }
     Serial.print(',');
   }
-  Serial.println("End of Array");
   exportArray = false;
 }
