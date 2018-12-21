@@ -1,12 +1,12 @@
 package com.mt.nl.torchbot.services;
 
 import com.fazecast.jSerialComm.SerialPort;
+import jdk.nashorn.internal.runtime.regexp.joni.Regex;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -15,7 +15,6 @@ public class ArduinoListenerMessagerTest {
 
     private static SerialPort port = null;
     private boolean listening = true;
-    private boolean sendingMessages = true;
     private String endArray = "-32000";
     private String sendingArray = "Send_Array";
     OutputStream outputStream;
@@ -46,9 +45,12 @@ public class ArduinoListenerMessagerTest {
         OutputStream outputStream = port.getOutputStream();
 
         ArduinoListenerMessagerTest a = new ArduinoListenerMessagerTest();
-        ArduinoListenerMessagerTest b = new ArduinoListenerMessagerTest();
+        a.arduinoListener();
 
-        new Thread(() -> a.arduinoListener(inputStream)).start();
+
+//        ArduinoListenerMessagerTest b = new ArduinoListenerMessagerTest();
+//
+//        new Thread(() -> a.arduinoListener(inputStream)).start();
 //        Thread.sleep(1000);
 //        new Thread(() -> b.arduinoMessager(outputStream)).start();
     }
@@ -62,8 +64,10 @@ public class ArduinoListenerMessagerTest {
             File file = new File("D:\\Overall_Projects\\TorchBot\\test.txt");
             Path yourPath = file.toPath();
             byte[] encoded = Files.readAllBytes(yourPath);
-            String textFile = new String(encoded, StandardCharsets.UTF_8);
+            String textFile = new String(encoded, StandardCharsets.UTF_8).replace("\r\n","");
             List<String> commaSeparatedList = Arrays.asList(textFile.split(","));
+
+
             String eol = "\n";
             Thread.sleep(100);
             for (String line : commaSeparatedList) {
@@ -79,10 +83,11 @@ public class ArduinoListenerMessagerTest {
 
     }
 
-    private void arduinoListener(InputStream inputStream) {
+    private void arduinoListener() {
         System.out.println("Listening to arduino");
         while (listening) {
             try {
+                InputStream inputStream = port.getInputStream();
                 Thread.sleep(500);
                 int length = inputStream.available();
                 byte[] buffer = new byte[length];
@@ -108,8 +113,10 @@ public class ArduinoListenerMessagerTest {
                         writer.write(stringSeq);
                         writer.close();
                         inputStream.close();
-                    } else if(result.contains("Receiving_Array")){
+                    } else if (result.contains("Receiving_Array")) {
+                        System.out.println("Arduino expects to get an array sending array to arduino");
                         arduinoMessager();
+                        inputStream.close();
                     }
                 }
             } catch (Exception e) {
@@ -121,7 +128,7 @@ public class ArduinoListenerMessagerTest {
     private static SerialPort openConnection(SerialPort[] ports, SerialPort port) {
         for (SerialPort p : ports) {
             System.out.println(p.getSystemPortName());
-            if (p.getSystemPortName().equals("COM5")) {  /*for your question, <required_port> would be ttyACM0, but this can change if you reconnect the device, or if multiple devices are connected.*/
+            if (p.getSystemPortName().equals("COM4")) {  /*for your question, <required_port> would be ttyACM0, but this can change if you reconnect the device, or if multiple devices are connected.*/
                 port = p;
             }
         }
