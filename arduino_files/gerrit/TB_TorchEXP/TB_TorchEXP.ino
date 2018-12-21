@@ -225,6 +225,7 @@ void loop() {
     //start writing from StepNr 1
     StartRecTransition = false;
     StepNr = 1;
+    ActionButtonPressed = false;
     ActionNr = 0;
     WriteArray(-31000, 0);         //-31000: begin of Array mark
     Ypos = (YposLong + 2) >> 2;
