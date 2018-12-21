@@ -1,7 +1,6 @@
 package com.mt.nl.torchbot.services;
 
 import com.fazecast.jSerialComm.SerialPort;
-import jdk.nashorn.internal.runtime.regexp.joni.Regex;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -64,9 +63,8 @@ public class ArduinoListenerMessagerTest {
             File file = new File("D:\\Overall_Projects\\TorchBot\\test.txt");
             Path yourPath = file.toPath();
             byte[] encoded = Files.readAllBytes(yourPath);
-            String textFile = new String(encoded, StandardCharsets.UTF_8).replace("\r\n","");
+            String textFile = new String(encoded, StandardCharsets.UTF_8).replace("\r\n", "");
             List<String> commaSeparatedList = Arrays.asList(textFile.split(","));
-
 
             String eol = "\n";
             Thread.sleep(100);
@@ -77,6 +75,7 @@ public class ArduinoListenerMessagerTest {
                     outputStream.write(eol.getBytes());
                 }
             }
+            outputStream.close();
         } catch (Exception e) {
             System.out.println("printing out exception: " + e);
         }
@@ -103,7 +102,7 @@ public class ArduinoListenerMessagerTest {
 
                     System.out.println("Reading from Arduino: \n " + result);
 
-                    if (result.contains(endArray)) {
+                    if (result.contains(sendingArray)) {
                         System.out.println("Array will be stored in output file");
                         int startArray = result.indexOf(sendingArray);
                         int lengthSender = sendingArray.length();
@@ -113,7 +112,7 @@ public class ArduinoListenerMessagerTest {
                         writer.write(stringSeq);
                         writer.close();
                         inputStream.close();
-                    } else if (result.contains("Receiving_Array")) {
+                    } else if (result.contains("Request_Array_From_PC")) {
                         System.out.println("Arduino expects to get an array sending array to arduino");
                         arduinoMessager();
                         inputStream.close();
@@ -128,7 +127,7 @@ public class ArduinoListenerMessagerTest {
     private static SerialPort openConnection(SerialPort[] ports, SerialPort port) {
         for (SerialPort p : ports) {
             System.out.println(p.getSystemPortName());
-            if (p.getSystemPortName().equals("COM4")) {  /*for your question, <required_port> would be ttyACM0, but this can change if you reconnect the device, or if multiple devices are connected.*/
+            if (p.getSystemPortName().equals("COM5")) {  /*for your question, <required_port> would be ttyACM0, but this can change if you reconnect the device, or if multiple devices are connected.*/
                 port = p;
             }
         }

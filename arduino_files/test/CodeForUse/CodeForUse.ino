@@ -59,7 +59,7 @@ void receiveArray() {
 void receiveCharacter() {
   char inChar = Serial.read();
   if (inChar != -1) {
-//    timeOutReceiveFromPC = 0;
+    //    timeOutReceiveFromPC = 0;
     String temp = String(inChar);
     readString += temp;
 
