@@ -10,7 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 
 
-public class ArduinoListenerMessagerTest {
+public class ArduinoConnector {
 
     private static SerialPort port = null;
     private boolean listening = true;
@@ -43,15 +43,9 @@ public class ArduinoListenerMessagerTest {
         InputStream inputStream = port.getInputStream();
         OutputStream outputStream = port.getOutputStream();
 
-        ArduinoListenerMessagerTest a = new ArduinoListenerMessagerTest();
+        ArduinoConnector a = new ArduinoConnector();
         a.arduinoListener();
 
-
-//        ArduinoListenerMessagerTest b = new ArduinoListenerMessagerTest();
-//
-//        new Thread(() -> a.arduinoListener(inputStream)).start();
-//        Thread.sleep(1000);
-//        new Thread(() -> b.arduinoMessager(outputStream)).start();
     }
 
     private void arduinoMessager() {
