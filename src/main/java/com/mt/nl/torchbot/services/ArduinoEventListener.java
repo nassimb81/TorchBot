@@ -12,8 +12,8 @@ public class ArduinoEventListener {
     private boolean listening = true;
     private String sendingArray = "Send_Array";
 
-    ArduinoInitiator initiater = new ArduinoInitiator();
-    ArduinoResponder responder = new ArduinoResponder();
+    private ArduinoInitiator initiater = new ArduinoInitiator();
+    private ArduinoResponder responder = new ArduinoResponder();
 
 
     public ArduinoEventListener() {

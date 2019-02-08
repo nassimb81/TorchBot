@@ -6,6 +6,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -46,13 +47,13 @@ public class ArduinoConnector {
 
     }
 
-    public static SerialPort openConnection() {
+    public static SerialPort openConnection(String portWanted) {
         SerialPort[] ports = SerialPort.getCommPorts();
 
         for (SerialPort p : ports) {
-            System.out.println(p.getSystemPortName());
-            if (p.getSystemPortName().equals("COM5")) {  /*for your question, <required_port> would be ttyACM0, but this can change if you reconnect the device, or if multiple devices are connected.*/
+            if (p.getSystemPortName().equals(portWanted)) {
                 port = p;
+                System.out.println("Port selected: " + portWanted);
             }
         }
 
@@ -73,5 +74,22 @@ public class ArduinoConnector {
         return port;
     }
 
+    public List<String> getPorts() {
+        SerialPort[] ports = SerialPort.getCommPorts();
+        List<String> portsList = new ArrayList<>();
+        for (SerialPort p : ports) {
+            portsList.add(p.getSystemPortName());
+        }
+
+        if (portsList.isEmpty()) {
+            System.err.println("No Ports Detected, check if Arduino is connected");
+        }
+
+        return portsList;
+    }
+
+    public static SerialPort getConnection(){
+        return port;
+    }
 }
 
