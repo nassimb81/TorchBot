@@ -1,6 +1,7 @@
 package com.mt.nl.torchbot.services;
 
 import com.fazecast.jSerialComm.SerialPort;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -10,8 +11,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-
-public class ArduinoConnector {
+@Slf4j
+public class TorchBotConnector {
 
     private static SerialPort port = null;
     private String endArray = "-32000";
@@ -21,7 +22,7 @@ public class ArduinoConnector {
 
     private void arduinoMessager() {
 
-        System.out.println("Messaging to arduino");
+        log.info("Messaging to arduino");
         outputStream = port.getOutputStream();
 
         try {
@@ -35,14 +36,14 @@ public class ArduinoConnector {
             Thread.sleep(100);
             for (String line : commaSeparatedList) {
                 if (line.matches("^-?[0-9]+$")) {
-                    System.out.println("Printing out : " + line);
+                    log.info("Printing out : " + line);
                     outputStream.write(line.getBytes());
                     outputStream.write(eol.getBytes());
                 }
             }
             outputStream.close();
         } catch (Exception e) {
-            System.out.println("printing out exception: " + e);
+            log.error("printing out exception: " + e);
         }
 
     }
@@ -53,7 +54,7 @@ public class ArduinoConnector {
         for (SerialPort p : ports) {
             if (p.getSystemPortName().equals(portWanted)) {
                 port = p;
-                System.out.println("Port selected: " + portWanted);
+                log.info("Port selected: " + portWanted);
             }
         }
 
@@ -65,9 +66,9 @@ public class ArduinoConnector {
         port.setComPortTimeouts(SerialPort.LISTENING_EVENT_DATA_AVAILABLE, 0, 0); // block until bytes can be written
 
         if (port.openPort()) {
-            System.out.println("Port is open :) and port is " + port.toString());
+            log.info("Port is open :) and port is " + port.toString());
         } else {
-            System.out.println("Failed to open port :(");
+            log.error("Failed to open port :(");
             return null;
         }
 

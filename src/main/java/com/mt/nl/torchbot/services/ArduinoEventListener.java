@@ -2,11 +2,13 @@ package com.mt.nl.torchbot.services;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.mt.nl.torchbot.utility.ArduinoInitiator;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
+@Slf4j
 public class ArduinoEventListener {
 
     private boolean listening = true;
@@ -22,7 +24,7 @@ public class ArduinoEventListener {
 
 
     public void startListening(SerialPort port) throws InterruptedException, IOException {
-        System.out.println("Listening to arduino");
+        log.info("Listening to arduino");
         while (listening) {
             try {
                 InputStream inputStream = port.getInputStream();
@@ -39,10 +41,10 @@ public class ArduinoEventListener {
 
                     String result = new String(buffer, StandardCharsets.UTF_8);
 
-                    System.out.println("Reading from Arduino: \n " + result);
+                    log.info("Reading from Arduino: \n " + result);
 
                     if (result.contains(sendingArray)) {
-                        System.out.println("Array will be stored in output file");
+                        log.info("Array will be stored in output file");
                         initiater.exportFile(result);
                         inputStream.close();
                     } else if (result.contains("Request_Array_From_PC")) {
@@ -51,7 +53,7 @@ public class ArduinoEventListener {
                     }
                 }
             } catch (Exception e) {
-                System.out.println("printing out exception in Arduino Listener: " + e);
+                log.error("printing out exception in Arduino Listener: " + e);
                 throw e;
             }
         }

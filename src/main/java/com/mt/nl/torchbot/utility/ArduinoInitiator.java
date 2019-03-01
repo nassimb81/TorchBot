@@ -17,12 +17,12 @@ public class ArduinoInitiator {
     // Array is vanuit Arduino naar Service verstuurd en wordt opgeslagen in het windows of linux systeem
     public void exportFile(String result) {
         for (ArduinoListener al : listeners)
-            al.exportFile(result);
+            al.importFile(result);
     }
 
     // Array wordt vanuit java service naar de arduino verstuurd.
     public void importFile(SerialPort port) {
         for (ArduinoListener al : listeners)
-            al.importFile(port);
+            al.exportFile(port);
     }
 }

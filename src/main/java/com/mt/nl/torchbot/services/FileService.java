@@ -1,5 +1,7 @@
 package com.mt.nl.torchbot.services;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -12,11 +14,13 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-class FileService {
+@Slf4j
+public class FileService {
 
     private static final String ARDUINO_SAVE_KEYWORD = "Send_Array";
 
-    private static String filenameCurrentlyImportedArray;
+    private static String fileNameCurrentlyExportedArray;
+    private static String fileNameCurrentlyImportedArray;
 
     /**
      * Method is called when the arduino has send an array for saving
@@ -25,57 +29,71 @@ class FileService {
      * @param array
      */
     void gettingArrayFromArduino(String array) {
-        System.out.println("Saving File !");
-        System.out.println("Array will be stored in output file");
+        log.info("Saving File !");
+        log.info("Array will be stored in output file");
         int startArray = array.indexOf(ARDUINO_SAVE_KEYWORD);
         int lengthSender = ARDUINO_SAVE_KEYWORD.length();
 
         try {
             String stringSeq = array.substring(startArray + lengthSender);
-            String fileName = "temporary_export_array_"
-                    + new SimpleDateFormat("yyyyMM_ddHHmm'.txt'").format(new Date());
+            String fileName = "temporary_import_array_"
+                    + new SimpleDateFormat("yyyyMMdd_HHmmSS'.txt'").format(new Date());
             BufferedWriter writer = new BufferedWriter(new FileWriter(fileName));
+            fileNameCurrentlyImportedArray = fileName;
+            log.info("Temporary imported file: {}", fileNameCurrentlyImportedArray);
             writer.write(stringSeq);
             writer.close();
         } catch (IOException ioEx) {
-            System.out.println("Error thrown during saving the temporary array from the arduino");
+            log.error("Error thrown during saving of the temporary array from the arduino");
         }
     }
 
     /**
-     * Method is called when import button is clicked in the window
-     * Stores the imported filed to a temporary file that can be picked up later through the arduino
+     * Method is called when export button is clicked in the window
+     * Stores the exported file to a temporary file that can be picked up later through the arduino
      *
      * @return The Specified Array from the PC
      * @throws IOException
      */
-    public void saveImportedFileToTempLocation(String array, String location) throws IOException {
+    public boolean exportFileTemp(String array) throws IOException {
+        String fileName = "temp_export_array_"
+                + new SimpleDateFormat("yyyyMMdd_HHmmSS'.txt'").format(new Date());
 
-        File file = new File("D:\\Overall_Projects\\TorchBot\\test.txt");
-        Path yourPath = file.toPath();
-        byte[] encoded = Files.readAllBytes(yourPath);
-        String textFile = new String(encoded, StandardCharsets.UTF_8).replace("\r\n", "");
+        File dir = new File("temp\\");
+        dir.mkdirs();
+        File file = new File(dir, fileName);
 
-        String fileName = "temporary_import_array_"
-                + new SimpleDateFormat("yyyyMM_ddHHmmSS'.txt'").format(new Date());
-
-        BufferedWriter writer = new BufferedWriter(new FileWriter(fileName));
-        writer.write(textFile);
+        BufferedWriter writer = new BufferedWriter(new FileWriter(file));
+        writer.write(array);
         writer.close();
 
-        filenameCurrentlyImportedArray = fileName;
+        fileNameCurrentlyExportedArray = fileName;
 
-        System.out.println("Temporary Imported Files: " + filenameCurrentlyImportedArray);
+        log.info("Temporary Exported File: {}", fileNameCurrentlyExportedArray);
+
+        return true;
 
     }
 
-    List<String> getImportedArray() throws IOException {
-        File file = new File("D:\\Overall_Projects\\TorchBot\\" + filenameCurrentlyImportedArray);
+
+    List<String> getExportedArray() throws IOException {
+        File file = new File("temp\\" + fileNameCurrentlyExportedArray);
         Path yourPath = file.toPath();
         byte[] encoded = Files.readAllBytes(yourPath);
         String textFile = new String(encoded, StandardCharsets.UTF_8).replace("\r\n", "");
 
         return Arrays.asList(textFile.split(","));
+
+    }
+
+    public String getImportedArray() throws IOException {
+        fileNameCurrentlyImportedArray = "temp_import_array_20190214_1741166.txt";
+        File file = new File("temp\\" + fileNameCurrentlyImportedArray);
+        Path yourPath = file.toPath();
+        byte[] encoded = Files.readAllBytes(yourPath);
+        String textFile = new String(encoded, StandardCharsets.UTF_8).replace("\r\n", "");
+        log.info("Fetching Temporary imported file from Arduino array is: {} ", textFile);
+        return textFile;
 
     }
 

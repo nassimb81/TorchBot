@@ -2,17 +2,12 @@ package com.mt.nl.torchbot.services;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.mt.nl.torchbot.domain.ArduinoListener;
+import lombok.extern.slf4j.Slf4j;
 
-
-import java.io.IOException;
 import java.io.OutputStream;
-import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 
+@Slf4j
 public class ArduinoResponder implements ArduinoListener {
 
     private FileService fileService = new FileService();
@@ -24,13 +19,13 @@ public class ArduinoResponder implements ArduinoListener {
      * The file will be saved under a name specified by the end-user
      * @param array
      */
-    public void exportFile(String array) {
+    public void importFile(String array) {
         fileService.gettingArrayFromArduino(array);
     }
 
-    public void importFile(SerialPort port) {
-        System.out.println("Sending File!");
-        System.out.println("Arduino expects to get an array; sending array to arduino");
+    public void exportFile(SerialPort port) {
+        log.info("Sending File!");
+        log.info("Arduino expects to get an array; sending array to arduino");
         arduinoMessager(port);
     }
 
@@ -40,24 +35,24 @@ public class ArduinoResponder implements ArduinoListener {
      */
     private void arduinoMessager(SerialPort port) {
 
-        System.out.println("Messaging to arduino");
+        log.info("Messaging to arduino");
         OutputStream outputStream = port.getOutputStream();
 
         try {
-            List<String> commaSeparatedList = fileService.getImportedArray();
+            List<String> commaSeparatedList = fileService.getExportedArray();
 
             String eol = "\n";
             Thread.sleep(100);
             for (String line : commaSeparatedList) {
                 if (line.matches("^-?[0-9]+$")) {
-                    System.out.println("Printing out : " + line);
+                    log.info("Printing out : " + line);
                     outputStream.write(line.getBytes());
                     outputStream.write(eol.getBytes());
                 }
             }
             outputStream.close();
         } catch (Exception e) {
-            System.out.println("printing out exception: " + e);
+            log.error("printing out exception: " + e);
         }
 
     }
