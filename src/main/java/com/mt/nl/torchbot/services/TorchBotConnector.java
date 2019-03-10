@@ -3,7 +3,8 @@ package com.mt.nl.torchbot.services;
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.*;
+import java.io.File;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,16 +13,21 @@ import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
-public class TorchBotConnector {
+public class TorchBotConnector  implements Runnable {
 
     private static SerialPort port = null;
     private String endArray = "-32000";
     private String sendingArray = "Send_Array";
-    OutputStream outputStream;
+    private String portWanted;
 
+    public TorchBotConnector(String portWanted) {
+        this.portWanted = portWanted;
+    }
+
+    public TorchBotConnector(){}
 
     private void arduinoMessager() {
-
+        OutputStream outputStream;
         log.info("Messaging to arduino");
         outputStream = port.getOutputStream();
 
@@ -48,7 +54,7 @@ public class TorchBotConnector {
 
     }
 
-    public static SerialPort openConnection(String portWanted) {
+    public SerialPort openConnection() {
         SerialPort[] ports = SerialPort.getCommPorts();
 
         for (SerialPort p : ports) {
@@ -89,8 +95,18 @@ public class TorchBotConnector {
         return portsList;
     }
 
-    public static SerialPort getConnection(){
+    public static SerialPort getConnection() {
         return port;
+    }
+
+    public void run() {
+        try {
+            SerialPort port = openConnection();
+            new ArduinoEventListener().startListening(port);
+
+        } catch (Exception ex) {
+            log.error("Exception thrown while opening connection and startening to Listen: " + ex);
+        }
     }
 }
 

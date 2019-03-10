@@ -38,11 +38,17 @@ public class FileService {
             String stringSeq = array.substring(startArray + lengthSender);
             String fileName = "temporary_import_array_"
                     + new SimpleDateFormat("yyyyMMdd_HHmmSS'.txt'").format(new Date());
-            BufferedWriter writer = new BufferedWriter(new FileWriter(fileName));
+
+            File dir = new File("temp\\");
+            dir.mkdirs();
+            File file = new File(dir, fileName);
+
+            BufferedWriter writer = new BufferedWriter(new FileWriter(file));
+            writer.write(array);
+            writer.close();
+
             fileNameCurrentlyImportedArray = fileName;
             log.info("Temporary imported file: {}", fileNameCurrentlyImportedArray);
-            writer.write(stringSeq);
-            writer.close();
         } catch (IOException ioEx) {
             log.error("Error thrown during saving of the temporary array from the arduino");
         }
@@ -77,17 +83,22 @@ public class FileService {
 
 
     List<String> getExportedArray() throws IOException {
-        File file = new File("temp\\" + fileNameCurrentlyExportedArray);
-        Path yourPath = file.toPath();
-        byte[] encoded = Files.readAllBytes(yourPath);
-        String textFile = new String(encoded, StandardCharsets.UTF_8).replace("\r\n", "");
+        if (fileNameCurrentlyExportedArray != null) {
+            File file = new File("temp\\" + fileNameCurrentlyExportedArray);
+            Path yourPath = file.toPath();
+            byte[] encoded = Files.readAllBytes(yourPath);
+            String textFile = new String(encoded, StandardCharsets.UTF_8).replace("\r\n", "");
 
-        return Arrays.asList(textFile.split(","));
+            return Arrays.asList(textFile.split(","));
+        } else {
+            return null;
+        }
+
 
     }
 
     public String getImportedArray() throws IOException {
-        fileNameCurrentlyImportedArray = "temp_import_array_20190214_1741166.txt";
+        log.info("To be saved array received from arduino {}", fileNameCurrentlyImportedArray);
         File file = new File("temp\\" + fileNameCurrentlyImportedArray);
         Path yourPath = file.toPath();
         byte[] encoded = Files.readAllBytes(yourPath);

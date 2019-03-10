@@ -1,5 +1,6 @@
 package com.mt.nl.torchbot;
 
+import com.fazecast.jSerialComm.SerialPort;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -28,13 +29,4 @@ public class TorchBotApplication extends Application {
         primaryStage.show();
     }
 
-    private static void run() {
-        try {
-//            SerialPort port = openConnection();
-//            new ArduinoEventListener().startListening(port);
-
-        } catch (Exception ex) {
-            log.error("Exception thrown while opening connection and startening to Listen: " + ex);
-        }
-    }
 }

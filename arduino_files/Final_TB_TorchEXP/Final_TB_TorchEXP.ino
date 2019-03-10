@@ -193,7 +193,6 @@ void loop() {
       timeOutReceiveFromPC = timeOutReceiveFromPC + 1;
     }
     Serial.print("Out of while loop");
-    //Serial.println("StartPlayTransition");
 
     StartPlayTransition = false;
 
@@ -201,20 +200,20 @@ void loop() {
     //Serial.println("StartPlayTransition");
     StartPlayTransition = false;
     teller = 1;
-          do{
-            ReadStepData(teller);
-            Serial.print("C1 and C2: ");
-            Serial.print(StepDataC1);
-            Serial.print("  ");
-            Serial.println(StepDataC2);
-            teller = teller + 1;
-          }while(StepDataC1 != -32000 || teller > 400);
-          
+    do {
+      ReadStepData(teller);
+      Serial.print("C1 and C2: ");
+      Serial.print(StepDataC1);
+      Serial.print("  ");
+      Serial.println(StepDataC2);
+      teller = teller + 1;
+    } while (StepDataC1 != -32000 || teller > 30);
+
     StepNr = 1;     //start from the 'top'
     ReadStepData(StepNr);
     Serial.print("StepdataC1 is ");
     Serial.print(StepDataC1);
-    
+
     if (StepDataC1 == -31000) {
       ReadStepData(StepNr);           //Second row should contain the starting point of the recording
       Ydestination = 4UL * StepDataC1;
@@ -229,6 +228,7 @@ void loop() {
   } else if (StartRecTransition == true) { //code to be executed until transition completed========================
     //start writing from StepNr 1
     StartRecTransition = false;
+    sendArrayToPC = true;
     StepNr = 1;
     ActionButtonPressed = false;
     ActionNr = 0;
@@ -239,8 +239,8 @@ void loop() {
     Waiting4_1stEvent = true;
     //Serial.println("StartRecTransition ended");
   } else if (StopPlayTransition == true) { //code to be executed until transition completed========================
-    receiveArrayFromPC=true;
-    timeOutReceiveFromPC=0;
+    receiveArrayFromPC = true;
+    timeOutReceiveFromPC = 0;
     StopPlayTransition = false;
     ActionsDuringStep = false;          //only actions while in PlayMode
     //Serial.println("StopPlayTransition ended");
@@ -275,7 +275,7 @@ void loop() {
       //Serial.println("entering ManualMode");
       while (ManualMode == Requested) {         //while Rec / Play switch in Manual position
         ReadDCState();                   //Read Direction Control input pins and calculate State
-        StateChangeExeptions();		//was SetLastIfStart, nu wordt daar ook het stoppen geregeld
+        StateChangeExeptions();    //was SetLastIfStart, nu wordt daar ook het stoppen geregeld
         CondPulseAndUpdatePos();         //give pulses if no EndSwitch is active And update position
         CaseNr = CaseNr + 1;
         switch (CaseNr) {
@@ -863,7 +863,7 @@ int CalcVel(int U) {    //gebruiken we nu eerst even niet, wellicht kan dit gewo
   TperiodOld = Tperiod;
   //  T = 1277913UL / (U+39);   //T max = 32767, T min = 1203
   //  T = 2949456UL / (U+1429);   //T max = 2064, T min = 1202
-  //  T = 751752UL / (U+788); 	//T max = 954, T min = 417
+  //  T = 751752UL / (U+788);   //T max = 954, T min = 417
   //  T = 246000 / (U+205); //1200 tot 200
   T = 341000UL / (U + 341); //T max = 1000, T min = 250
   //  T = 439000UL / (U+439); //T max = 1000. T min = 300
@@ -945,7 +945,7 @@ void receiveArray() {
 void receiveCharacter() {
   char inChar = Serial.read();
   if (inChar != -1) {
-    timeOutReceiveFromPC = 0;
+    //    timeOutReceiveFromPC = 0;
     String temp = String(inChar);
     readString += temp;
 
@@ -954,13 +954,13 @@ void receiveCharacter() {
 
       if (readString.equals("-32000\n")) { //end of array turning off reading from array
         receiveArrayFromPC = false;
-        Serial.print("Array Received");
       }
       ReadNr = ReadNr + 1;
       readString = "";
     }
   }
 }
+
 // Sends array to java service:
 // 1) Loops over SEQ array and prints it to the serial port until -32000 is reached
 // 2) Breaks out of loop and sets sendArrayTPC boolean to false
@@ -973,4 +973,5 @@ void sendArray() {
     }
     Serial.print(',');
   }
+  sendArrayToPC = false;
 }

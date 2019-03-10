@@ -45,10 +45,10 @@ public class ArduinoEventListener {
 
                     if (result.contains(sendingArray)) {
                         log.info("Array will be stored in output file");
-                        initiater.exportFile(result);
+                        initiater.importFile(result);
                         inputStream.close();
-                    } else if (result.contains("Request_Array_From_PC")) {
-                        initiater.importFile(port);
+                    } else if (result.contains("Receiving_Array")) {
+                        initiater.exportFile(port);
                         inputStream.close();
                     }
                 }

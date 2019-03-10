@@ -1,9 +1,9 @@
 package com.mt.nl.torchbot.controller;
 
 import com.fazecast.jSerialComm.SerialPort;
-import com.mt.nl.torchbot.services.TorchBotConnector;
 import com.mt.nl.torchbot.services.ArrayValidator;
 import com.mt.nl.torchbot.services.FileService;
+import com.mt.nl.torchbot.services.TorchBotConnector;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.ResourceBundle;
 
 import static com.mt.nl.torchbot.services.TorchBotConnector.getConnection;
-import static com.mt.nl.torchbot.services.TorchBotConnector.openConnection;
 
 @Slf4j
 public class ControllerGUI implements Initializable {
@@ -108,21 +107,23 @@ public class ControllerGUI implements Initializable {
     @FXML
     private void startConnection(ActionEvent event) {
         SerialPort port = getConnection();
-
-        if (port == null) {
-            port = openConnection(portChoosen);
-            if (port != null) {
+        if (!portChoosen.isEmpty()) {
+            if (port == null) {
+                TorchBotConnector tbc = new TorchBotConnector(portChoosen);
+                Thread t = new Thread(tbc);
+                t.start();
                 textArea.clear();
                 textArea.appendText("Connection has been made!");
             } else {
                 textArea.clear();
-                textArea.appendText("No Connection has been made, have you selected the port?");
+                textArea.appendText("You already made a connection!");
             }
         } else {
             textArea.clear();
-            textArea.appendText("You already made a connection!");
+            textArea.appendText("No Connection has been made, have you selected the port?");
         }
     }
+
 
     @FXML
     private void exportArray() {
@@ -155,7 +156,8 @@ public class ControllerGUI implements Initializable {
         } catch (IOException io) {
             System.err.println("Exception during exporting of File");
             textArea.clear();
-            textArea.appendText("File is not exported correctly\ntry exporting again or check the temp folder");
+            textArea.appendText("File is not imported correctly from the arduino " +
+                    "\n try importing again or check the temp folder");
         }
     }
 
@@ -184,4 +186,6 @@ public class ControllerGUI implements Initializable {
 
         startConnectionMenuItem.setVisible(true);
     }
+
+
 }

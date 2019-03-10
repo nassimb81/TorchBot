@@ -12,11 +12,12 @@ public class ArduinoResponder implements ArduinoListener {
 
     private FileService fileService = new FileService();
 
-    private boolean listening = true;
+    private String eol = "\n";
 
     /**
      * When the java service receives a string from the arduino it sends it to the fileservice
      * The file will be saved under a name specified by the end-user
+     *
      * @param array
      */
     public void importFile(String array) {
@@ -31,6 +32,7 @@ public class ArduinoResponder implements ArduinoListener {
 
     /**
      * When the java service receives a signal from the arduino that it's waiting for a file
+     *
      * @param port
      */
     private void arduinoMessager(SerialPort port) {
@@ -41,22 +43,28 @@ public class ArduinoResponder implements ArduinoListener {
         try {
             List<String> commaSeparatedList = fileService.getExportedArray();
 
-            String eol = "\n";
-            Thread.sleep(100);
-            for (String line : commaSeparatedList) {
-                if (line.matches("^-?[0-9]+$")) {
-                    log.info("Printing out : " + line);
-                    outputStream.write(line.getBytes());
-                    outputStream.write(eol.getBytes());
+            if (commaSeparatedList != null) {
+
+                Thread.sleep(100);
+                for (String line : commaSeparatedList) {
+                    if (line.matches("^-?[0-9]+$")) {
+                        log.info("Printing out : " + line);
+                        outputStream.write(line.getBytes());
+                        outputStream.write(eol.getBytes());
+                    }
                 }
+                outputStream.close();
+            } else {
+                String noArrayAvailable = "No_Array_Available" + eol;
+                Thread.sleep(100);
+
+                outputStream.write(noArrayAvailable.getBytes());
+                outputStream.write(eol.getBytes());
             }
-            outputStream.close();
-        } catch (Exception e) {
-            log.error("printing out exception: " + e);
+        } catch (
+                Exception e) {
+            log.error("Printing out exception: " + e);
         }
-
     }
-
-
 }
 
