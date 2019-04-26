@@ -3,7 +3,7 @@
 //that is why I decided to perform [CeckModeTransition and CalcVel] OR [analogRead] at half the frequency
 //this has to be done in both real time situations: Rec and Manual
 //
-//pin numbers
+//pin numbers 
 const int YincPin = 23; //Y+ (pin number)
 const int YdecPin = 25; //Y-
 const int ZincPin = 27; //Z+
@@ -27,7 +27,7 @@ const int StopPin = 51;  //idem
 const int ActionPin = 53;   //idem
 
 const int LedPin = 13;
-int LedOnOff = HIGH;
+int LedOnOff = HIGH;					  
 const int VelPotPin = A15; //input pin for analog velocity signal
 
 //variables (and constants)
@@ -46,7 +46,7 @@ int ZdecOld;
 
 const int Requested = LOW;      //value to make the code more readable and easy adaptable
 const int NoEndSwitch = HIGH;   //idem: check polarity
-const int EndSwitch = !NoEndSwitch;
+const int EndSwitch = !NoEndSwitch; 
 
 unsigned long int Last;         //timestamp of the timer: last pulse time
 
@@ -96,7 +96,7 @@ unsigned long int TStartEvent;
 bool Waiting4_1stEvent = false; //true;  eerst nog even niet..
 
 const int SEQlength = 1999;     //2000 elements, we see it as 1000 * 2: 1000 step's
-int SEQ[SEQlength];
+int SEQ[SEQlength];     
 int StepDataC1;
 int StepDataC2;
 int StepNr;       //step number of the sequence
@@ -120,261 +120,225 @@ bool LastEvent;
 long int Ydestination;
 long int Zdestination;
 
-//Variables needed for serial communication
-String readString;  //string to store characters from serial communication up to end of line (eol)
-bool receiveArrayFromPC;
-bool sendArrayToPC;
-int ReadNr;
-int timeOutReceiveFromPC = 0;
-
 int teller;
 
 void setup() {
-  //  delay(5000);
+//  delay(5000);
   Serial.begin(115200);
   Serial.println("EXIT Setup");
-  pinMode(LedPin, OUTPUT);
-  pinMode(YincPin, INPUT_PULLUP);
-  pinMode(YdecPin, INPUT_PULLUP);
-  pinMode(ZincPin, INPUT_PULLUP);
-  pinMode(ZdecPin, INPUT_PULLUP);
-  pinMode(YmaxPin, INPUT_PULLUP);
-  pinMode(YminPin, INPUT_PULLUP);
-  pinMode(ZmaxPin, INPUT_PULLUP);
-  pinMode(ZminPin, INPUT_PULLUP);
-  pinMode(DirYPin, OUTPUT);
-  pinMode(PulseYPin, OUTPUT);
-  pinMode(EnableYPin, OUTPUT);
-  pinMode(DirZPin, OUTPUT);
-  pinMode(PulseZPin, OUTPUT);
-  pinMode(EnableZPin, OUTPUT);
-  pinMode(RecPin, INPUT_PULLUP);
-  pinMode(PlayPin, INPUT_PULLUP);
-  pinMode(NextPin, INPUT_PULLUP);
-  pinMode(HomePin, INPUT_PULLUP);
-  pinMode(StartPin, INPUT_PULLUP);
-  pinMode(StopPin, INPUT_PULLUP);
-  pinMode(ActionPin, INPUT_PULLUP);
+  pinMode(LedPin,OUTPUT);						 
+  pinMode(YincPin,INPUT_PULLUP);
+  pinMode(YdecPin,INPUT_PULLUP);
+  pinMode(ZincPin,INPUT_PULLUP);
+  pinMode(ZdecPin,INPUT_PULLUP);
+  pinMode(YmaxPin,INPUT_PULLUP);
+  pinMode(YminPin,INPUT_PULLUP);
+  pinMode(ZmaxPin,INPUT_PULLUP);
+  pinMode(ZminPin,INPUT_PULLUP);
+  pinMode(DirYPin,OUTPUT);
+  pinMode(PulseYPin,OUTPUT);
+  pinMode(EnableYPin,OUTPUT);
+  pinMode(DirZPin,OUTPUT);
+  pinMode(PulseZPin,OUTPUT);
+  pinMode(EnableZPin,OUTPUT);
+  pinMode(RecPin,INPUT_PULLUP);
+  pinMode(PlayPin,INPUT_PULLUP);
+  pinMode(NextPin,INPUT_PULLUP);
+  pinMode(HomePin,INPUT_PULLUP);
+  pinMode(StartPin,INPUT_PULLUP);
+  pinMode(StopPin,INPUT_PULLUP);
+  pinMode(ActionPin,INPUT_PULLUP);
   ManualMode = Requested;
   RecMode = !Requested;
   PlayMode = !Requested;
-  digitalWrite(EnableYPin, HIGH);     //currently motors are Enabled continuouly
-  digitalWrite(EnableZPin, HIGH);     //must be HIGH to prevend decending of the torch
+  digitalWrite(EnableYPin,HIGH);      //currently motors are Enabled continuouly
+  digitalWrite(EnableZPin,HIGH);      //must be HIGH to prevend decending of the torch
   StopRecTransition = false; //the four mode transitions all false
   StopPlayTransition = false;
   StartRecTransition = false;
   StartPlayTransition = false;
   VelPotU = analogRead(VelPotPin);
   Tperiod = CalcVel(VelPotU);
-  //  Tperiod = 534;
+//  Tperiod = 534;
   ActionNr = 0;
   ActionsDuringStep = false;
 //  delay(3000);
   InitZeroY();    //move in plus dir until no endswitch, move back until endswitch, move in plus for 1 mm, set position to zero (Home)
   InitZeroZ();
-
-  Serial.println("<Arduino is ready>");
-  ReadNr = 1;
-  receiveArrayFromPC = true;
-  sendArrayToPC = true;
 }
 
 
 void loop() {
-
-  //always start testing if a transition between Modes has to be carried out
-  if (StartPlayTransition == true) {  //code to be executed until transition completed ===========================
-    //get array from Java-API
-    // Only goes into receiveArray when a Byte is send
-    Serial.print("Receiving_Array");
-    while (timeOutReceiveFromPC < 500 && receiveArrayFromPC) {
-      delay(100);
-      receiveArray();
-      timeOutReceiveFromPC = timeOutReceiveFromPC + 1;
-    }
-    Serial.print("Out of while loop");
-
-    StartPlayTransition = false;
-
-    //go to startpoint (with moderate speed), set speed to value from Array
-    //Serial.println("StartPlayTransition");
-    StartPlayTransition = false;
-    teller = 1;
-    do {
-      ReadStepData(teller);
-      Serial.print("C1 and C2: ");
-      Serial.print(StepDataC1);
-      Serial.print("  ");
-      Serial.println(StepDataC2);
-      teller = teller + 1;
-    } while (StepDataC1 != -32000 || teller > 30);
-
-    StepNr = 1;     //start from the 'top'
-    ReadStepData(StepNr);
-    Serial.print("StepdataC1 is ");
-    Serial.print(StepDataC1);
-
-    if (StepDataC1 == -31000) {
-      ReadStepData(StepNr);           //Second row should contain the starting point of the recording
-      Ydestination = 4UL * StepDataC1;
-      Zdestination = 4UL * StepDataC2;
-      Move2YZ(Ydestination, Zdestination, Tmoderate); //go to initial position with moderate speed
-    } else {
-      while (PlayMode == Requested) {   //if in PlayMode
-        CheckModeTransition();        //wait until Manual Mode
-      }
-    }
-    //Serial.println("StartPlayTransition ended");
-  } else if (StartRecTransition == true) { //code to be executed until transition completed========================
-    //start writing from StepNr 1
-    StartRecTransition = false;
-    sendArrayToPC = true;
-    StepNr = 1;
-    ActionButtonPressed = false;
-    ActionNr = 0;
-    WriteArray(-31000, 0);         //-31000: begin of Array mark
-    Ypos = (YposLong + 2) >> 2;
-    Zpos = (ZposLong + 2) >> 2;
-    WriteArray(Ypos, Zpos);       //initial position
-    Waiting4_1stEvent = true;
-    //Serial.println("StartRecTransition ended");
-  } else if (StopPlayTransition == true) { //code to be executed until transition completed========================
-    receiveArrayFromPC = true;
-    timeOutReceiveFromPC = 0;
-    StopPlayTransition = false;
-    ActionsDuringStep = false;          //only actions while in PlayMode
-    //Serial.println("StopPlayTransition ended");
-  } else if (StopRecTransition == true) {  //code to be executed until transition completed========================
-    StopRecTransition = false;
-    if (State == 15) {
-      WaitingTime = millis() - TStartWaiting;
-      WaitingTimeInt = WaitingTime >> 7;
-      if (WaitingTimeInt < 0) {
-        WaitingTimeInt = 32767; //no negative values, max wait 69 min 54 sec,
-      }
-      WriteArray(-30008, WaitingTimeInt);             //Error when trying to wait longer than 2h33m
-
-    } else {
-      Ypos = (YposLong + 2) >> 2;
-      Zpos = (ZposLong + 2) >> 2;
-      WriteArray(Ypos, Zpos);
-    }
-    WriteArray(-32000, 0); //marking the end of a Sequence (Array)
-    //write Array to PC (if connected)
-    if (sendArrayToPC) {
-      sendArray();
-    }
-    //just stay where you are!
-    //Serial.println("StopRecTransition ended");
-  } else {                                //NO TRANSITION BETWEEN MODES
-    //=================================================================================================================
-    if (ManualMode == Requested) {            //This if else if construction results in performing a transition
-      //before entering a while loop for the current Mode (Play, Rec, Manual)
-      State = 15;   //**is dit nodig  ja?                  //enter manual mode while waiting
-      CaseNr = 0;   //always do a analogRead before CalcVel
-      //Serial.println("entering ManualMode");
-      while (ManualMode == Requested) {         //while Rec / Play switch in Manual position
-        ReadDCState();                   //Read Direction Control input pins and calculate State
-        StateChangeExeptions();    //was SetLastIfStart, nu wordt daar ook het stoppen geregeld
-        CondPulseAndUpdatePos();         //give pulses if no EndSwitch is active And update position
-        CaseNr = CaseNr + 1;
-        switch (CaseNr) {
-          case 1:
-            VelPotU = analogRead(VelPotPin); //in the Manual mode the speed can be controlled
-            break;
-          case 2:
-            Tperiod = CalcVel(VelPotU);
-            CheckModeTransition();           //End one Mode and Start an other Mode if requested
-            if (digitalRead(ActionPin) == LOW) {
-              digitalWrite(EnableYPin, LOW);     //Disable motors for manual corrections of Y and Z position
-              digitalWrite(EnableZPin, LOW);     //
-            } else {
-              digitalWrite(EnableYPin, HIGH);     //motors are Enabled
-              digitalWrite(EnableZPin, HIGH);
-            }
-            if (digitalRead(HomePin) == Requested) {
-              Move2YZ(800, 800, Tmoderate);
-              InitZeroY();
-              InitZeroZ();
-            }
-            CaseNr = 0;                     //next time do an analogRead
-            break;
-        }
-        digitalWrite(PulseYPin, LOW);
-        digitalWrite(PulseZPin, LOW);
-        Wait4Tperiod(Tperiod);
-      }
-      //==================================================================================================================
-    } else if (PlayMode == Requested) {         //This if else if construction results in performing a transition
-      //before entering a while loop for the current Mode (Play, Rec, Manual)
-      //Serial.println("PlayMode waiting for start");
-      while (digitalRead(StartPin) != Requested & PlayMode == Requested) { //now wait for the start button to be pressed
-        CheckModeTransition();           //keep an eye on these switches
-      }
-      LastEvent = false;
-      //Serial.println("Sequence start");
-      while (PlayMode == Requested) {
-        DecodeNextSteps();          //read from Array until all actions and waitingTime OR movement are available
-        TStartEvent = millis();     //timings with respect to this time
-        if (WaitingEvent == true) {
-          while ((millis() - TStartEvent) < WaitingTime) {
-            if (digitalRead(NextPin) == LOW) {
-              break;          //exit loop if next button pushed
-            }
-            if (ActionsDuringStep == true) {
-              ActionCheck();
-            }
-            CheckModeTransition();    //check this also within this waiting loop...
-            if (StopRecTransition == true || StartRecTransition == true || StopPlayTransition == true || StartPlayTransition == true) {
-              break;
-            }
-
-            //hier zou een test kunnen komen die een break veroorzaakt als gevolg van Action Data.....
-          }
-        }
-        if (MovingEvent == true) {
-          Move2YZ(Ydestination, Zdestination, Tperiod);
-        }
-        if (LastEvent == true) {
-          StepNr = 2;
-          ReadStepData(StepNr);    //read initial position of the sequence
+  //allways start testing if a transition between Modes has to be carried out
+  if(StartPlayTransition == true){    //code to be executed until transition completed ===========================
+      //get array from RespPi (ALLWAYS?: no stand alone operation possible....,but how to solve this elegantly? (timeout?)
+	  //go to startpoint (with moderate speed), set speed to value from Array
+      //Serial.println("StartPlayTransition");
+      StartPlayTransition = false;
+      teller = 1;
+//      do{
+//        ReadStepData(teller);
+//        Serial.print("C1 and C2: ");
+//        Serial.print(StepDataC1);
+//        Serial.print("  ");
+//        Serial.println(StepDataC2);
+//        teller = teller + 1;
+//      }while(StepDataC1 != -32000 || teller > 400);
+      StepNr = 1;     //start from the 'top'
+      ReadStepData(StepNr);
+      if(StepDataC1 == -31000){
+          ReadStepData(StepNr);           //Second row should contain the starting point of the recording  
           Ydestination = 4UL * StepDataC1;
           Zdestination = 4UL * StepDataC2;
-          Move2YZ(YposLong, Zdestination, Tmoderate);    //move to inital position
-          Move2YZ(Ydestination, Zdestination, Tmoderate); //a Tperiod reading could also be a good idea
+          Move2YZ(Ydestination,Zdestination,Tmoderate);  //go to initial position with moderate speed         
+      }else{
+          while(PlayMode == Requested){     //if in PlayMode
+              CheckModeTransition();        //wait until Manual Mode
+          }          
+      }
+      //Serial.println("StartPlayTransition ended");
+  }else if(StartRecTransition == true){   //code to be executed until transition completed========================
+      //start writing from StepNr 1
+      StartRecTransition = false;
+      StepNr = 1; 
+	    ActionButtonPressed = false;						  
+      ActionNr = 0;
+      WriteArray(-31000,0);          //-31000: begin of Array mark 
+      Ypos = (YposLong + 2) >> 2;
+      Zpos = (ZposLong + 2) >> 2;  
+      WriteArray(Ypos,Zpos);        //initial position
+      Waiting4_1stEvent = true;
+      //Serial.println("StartRecTransition ended");
+  }else if(StopPlayTransition == true){   //code to be executed until transition completed========================
+      StopPlayTransition = false;
+      ActionsDuringStep = false;          //only actions while in PlayMode
+      //Serial.println("StopPlayTransition ended");
+  }else if(StopRecTransition == true){    //code to be executed until transition completed========================
+      StopRecTransition = false;     
+      if(State == 15){
+            WaitingTime = millis() - TStartWaiting;
+            WaitingTimeInt = WaitingTime >> 7;    
+            if(WaitingTimeInt < 0){WaitingTimeInt = 32767;} //no negative values, max wait 69 min 54 sec, 
+            WriteArray(-30008,WaitingTimeInt);              //Error when trying to wait longer than 2h33m
+
+      }else{
+            Ypos = (YposLong + 2) >> 2;
+            Zpos = (ZposLong + 2) >> 2;
+            WriteArray(Ypos,Zpos);
+      }
+      WriteArray(-32000,0); //marking the end of a Sequence (Array)
+//write Array to PC (if connected)
+//just stay where you are!
+      //Serial.println("StopRecTransition ended");
+  }else{                                 //NO TRANSITION BETWEEN MODES
+//=================================================================================================================      
+      if(ManualMode == Requested){              //This if else if construction results in performing a transition 
+                                         //before entering a while loop for the current Mode (Play, Rec, Manual)
+          State = 15;   //**is dit nodig  ja?                  //enter manual mode while waiting	
+          CaseNr = 0;   //always do a analogRead before CalcVel
+          //Serial.println("entering ManualMode");									
+          while(ManualMode == Requested){           //while Rec / Play switch in Manual position
+              ReadDCState();                   //Read Direction Control input pins and calculate State             
+              StateChangeExeptions();		//was SetLastIfStart, nu wordt daar ook het stoppen geregeld	   
+              CondPulseAndUpdatePos();         //give pulses if no EndSwitch is active And update position
+              CaseNr = CaseNr + 1;
+              switch(CaseNr){
+                case 1:
+                  VelPotU = analogRead(VelPotPin); //in the Manual mode the speed can be controlled
+                  break;
+                case 2:
+                  Tperiod = CalcVel(VelPotU);
+                  CheckModeTransition();           //End one Mode and Start an other Mode if requested
+                  if(digitalRead(ActionPin) == LOW){
+                       digitalWrite(EnableYPin,LOW);      //Disable motors for manual corrections of Y and Z position
+                       digitalWrite(EnableZPin,LOW);      //
+                  }else{
+                       digitalWrite(EnableYPin,HIGH);      //motors are Enabled
+                       digitalWrite(EnableZPin,HIGH); 
+                  }
+                  if(digitalRead(HomePin)==Requested){
+                        Move2YZ(800,800,Tmoderate);
+                        InitZeroY();
+                        InitZeroZ();
+                  }
+                  CaseNr = 0;                     //next time do an analogRead
+                  break;
+              }              
+              digitalWrite(PulseYPin,LOW);
+              digitalWrite(PulseZPin,LOW);
+              Wait4Tperiod(Tperiod);            
+          } 
+//==================================================================================================================          
+      }else if(PlayMode == Requested){           //This if else if construction results in performing a transition 
+                                            //before entering a while loop for the current Mode (Play, Rec, Manual)
+          //Serial.println("PlayMode waiting for start");  
+			    while(digitalRead(StartPin) != Requested & PlayMode == Requested){  //now wait for the start button to be pressed
+			       CheckModeTransition();           //keep an eye on these switches     
+			    }
           LastEvent = false;
-          while (digitalRead(StartPin) != Requested & PlayMode == Requested) { //now wait for the start button to be pressed
-            CheckModeTransition();           //keep an eye on these switches
+          //Serial.println("Sequence start");  
+          while(PlayMode == Requested){
+              DecodeNextSteps();          //read from Array until all actions and waitingTime OR movement are available
+              TStartEvent = millis();     //timings with respect to this time
+              if(WaitingEvent == true){
+                  while((millis() - TStartEvent) < WaitingTime){
+                      if(digitalRead(NextPin) == LOW){
+                          break;          //exit loop if next button pushed
+                      }
+                      if(ActionsDuringStep == true){
+                            ActionCheck();
+                      }
+                      CheckModeTransition();    //check this also within this waiting loop...
+                      if(StopRecTransition == true || StartRecTransition == true || StopPlayTransition == true || StartPlayTransition == true){
+                           break;
+                      }
+                      
+                      //hier zou een test kunnen komen die een break veroorzaakt als gevolg van Action Data.....
+                  }
+              }
+              if(MovingEvent == true){
+                  Move2YZ(Ydestination,Zdestination,Tperiod);
+              }
+              if(LastEvent == true){
+                  StepNr = 2;
+                  ReadStepData(StepNr);    //read initial position of the sequence
+                  Ydestination = 4UL * StepDataC1;
+                  Zdestination = 4UL * StepDataC2;
+                  Move2YZ(YposLong,Zdestination,Tmoderate);      //move to inital position
+                  Move2YZ(Ydestination,Zdestination,Tmoderate);  //a Tperiod reading could also be a good idea
+                  LastEvent = false;
+                  while(digitalRead(StartPin) != Requested & PlayMode == Requested){  //now wait for the start button to be pressed
+                      CheckModeTransition();           //keep an eye on these switches     
+                  }
+              } 
+              CheckModeTransition();  //** deze lijkt niet nodig
+         }        
+//==================================================================================================================        
+      }else if(RecMode == Requested){            //This if else if construction results in performing a transition 
+                                            //before entering a while loop for the current Mode (Play, Rec, Manual)
+          State = 15;       
+          CaseNr = 0;
+          //Serial.println("entering Rec mode");  									 
+          while(RecMode == Requested){           //while Rec / Play switch in Manual position
+              ReadDCState();                   //Read Direction Control input pins and calculate State
+              EventHandling();                 //also sets Last in case of starting a movement
+              CondPulseAndUpdatePos();         //give pulses if no EndSwitch is active And update position
+              CaseNr = CaseNr + 1;
+              switch(CaseNr){                 //less computation by slowing down the rates off:
+                case 1:
+                  VelPotU = analogRead(VelPotPin); //reading of analog speed setpoint
+                  break;
+                case 2:
+                  Tperiod = CalcVel(VelPotU);     //calculation of Tperiod and
+                  CheckModeTransition();          //End one Mode and Start an other Mode if requested
+                  CaseNr = 0;                     //next time do an analogRead
+                  break;
+              }
+              digitalWrite(PulseYPin,LOW);
+              digitalWrite(PulseZPin,LOW);
+              Wait4Tperiod(Tperiod);            
           }
-        }
-        CheckModeTransition();  //** deze lijkt niet nodig
-      }
-      //==================================================================================================================
-    } else if (RecMode == Requested) {          //This if else if construction results in performing a transition
-      //before entering a while loop for the current Mode (Play, Rec, Manual)
-      State = 15;
-      CaseNr = 0;
-      //Serial.println("entering Rec mode");
-      while (RecMode == Requested) {         //while Rec / Play switch in Manual position
-        ReadDCState();                   //Read Direction Control input pins and calculate State
-        EventHandling();                 //also sets Last in case of starting a movement
-        CondPulseAndUpdatePos();         //give pulses if no EndSwitch is active And update position
-        CaseNr = CaseNr + 1;
-        switch (CaseNr) {               //less computation by slowing down the rates off:
-          case 1:
-            VelPotU = analogRead(VelPotPin); //reading of analog speed setpoint
-            break;
-          case 2:
-            Tperiod = CalcVel(VelPotU);     //calculation of Tperiod and
-            CheckModeTransition();          //End one Mode and Start an other Mode if requested
-            CaseNr = 0;                     //next time do an analogRead
-            break;
-        }
-        digitalWrite(PulseYPin, LOW);
-        digitalWrite(PulseZPin, LOW);
-        Wait4Tperiod(Tperiod);
-      }
-    }
+      } 
   }
 }
 
@@ -401,13 +365,13 @@ void DecodeNextSteps(){
         }
         if(StepDataC1 == -32000){         //end of sequence
             LastEvent = true;            //LastEvent == true results in reading inital pos from Array....
-            AllInfoAfailable = true;
+            AllInfoAfailable = true;  
         }
         if(StepDataC1 < 0 & StepDataC1 > -501){   //Action,(500 maximum)
             ActionNr = StepDataC1;
-            ActionsDuringStep = true;
+            ActionsDuringStep = true; 
             NrOfActionsDuringStep = NrOfActionsDuringStep + 1;
-            ActionPointerWrite = ActionPointerWrite + 1;  //use fifo buffer for events,
+            ActionPointerWrite = ActionPointerWrite + 1;  //use fifo buffer for events, 
             //if ActionPointerWrite > 24: Error....
             ActionTimingFifo[ActionPointerWrite] = StepDataC2;
             ReadStepData(StepNr);     //read next data from Array in order to read Action Data
@@ -420,8 +384,8 @@ void DecodeNextSteps(){
             MovingEvent = true;
             AllInfoAfailable = true;
         }
-
-    }while(AllInfoAfailable == false);
+        
+    }while(AllInfoAfailable == false); 
 }
 
 //this function changes the values of Last, and calls: CondPulseAndUpdate, Wait4Tperiod
@@ -435,16 +399,16 @@ void Move2YZ(long int Y,long int Z, int T){
   int IndexMax;
   bool OneExtraStep;
   DeltaY = Y - YposLong;
-  DeltaZ = Z - ZposLong;
+  DeltaZ = Z - ZposLong; 
   if(DeltaY <0){
       Yinc = !Requested; Ydec = Requested;
   }else{
-      Yinc = Requested; Ydec = !Requested;
+      Yinc = Requested; Ydec = !Requested;  
   }
   if(DeltaZ <0){
       Zinc = !Requested; Zdec = Requested;
   }else{
-      Zinc = Requested; Zdec = !Requested;
+      Zinc = Requested; Zdec = !Requested;  
   }
   i = max((abs(DeltaY)),(abs(DeltaZ))); //
 //  if(abs(DeltaY) != abs(DeltaZ)){Serial.println("YZ movement not scale 1:1");} //** TESTING
@@ -463,10 +427,10 @@ void Move2YZ(long int Y,long int Z, int T){
       }
   }
   Last = micros()+150;
-//  //Serial.print("moving");
+//  //Serial.print("moving");            
   for(i;i>n+1;i--){  //** **n+1 **eerder stoppen met deze for loop om naar Stop te springen!
-      if(YposLong == Y){Yinc = !Requested; Ydec = !Requested;}
-      if(ZposLong == Z){Zinc = !Requested; Zdec = !Requested;}
+      if(YposLong == Y){Yinc = !Requested; Ydec = !Requested;} 
+      if(ZposLong == Z){Zinc = !Requested; Zdec = !Requested;} 
       CondPulseAndUpdatePos();
       delayMicroseconds(100);         //delay equal to AnalogRead (used in other modes after CondPu...)
       digitalWrite(PulseYPin,LOW);
@@ -488,7 +452,7 @@ void Move2YZ(long int Y,long int Z, int T){
           }
           break;  //exit the for loop, (in manual mode this happens right away)
       }
-      Wait4Tperiod(T);
+      Wait4Tperiod(T);         
   }
   if(OneExtraStep == true){
       CondPulseAndUpdatePos();
@@ -501,11 +465,11 @@ void Move2YZ(long int Y,long int Z, int T){
 //  Serial.print("Tperiod_index: ");
 //  Serial.println(Tperiod_index);
   Stop();   //** van deze stop weet ik dat die werkt
-  //delay(100);   //possibly unnessasary
+  //delay(100);   //possibly unnessasary 
  // Serial.print("moved to: YposLong ");
  // Serial.println(YposLong);
  // Serial.print("  ZposLong ");
- // Serial.println(ZposLong);
+ // Serial.println(ZposLong);     
 }
 
 
@@ -517,7 +481,7 @@ int findIndMax(int T){
     T=constrain(T,TperiodAllowed[Tperiod_indexMax],TperiodAllowed[0]);  //T within maximum bounds
     do{
          T_A = constrain(T,TperiodAllowed[(i+1)],TperiodAllowed[i]);
-         i = i + 1;
+         i = i + 1; 
     }while(T_A != T);
     i = i - 1;
     return i;
@@ -525,16 +489,16 @@ int findIndMax(int T){
 
 //(only)During Play ActionsDuringStep can be true
 //if so check if ActionTime has arrived and perform nessesary actions
-void ActionCheck(){
+void ActionCheck(){           
       ActionTimeInt = ActionTimingFifo[ActionPointerRead];
       ActionTime = 128UL * ActionTimeInt;
       if((millis() - TStartEvent) >= ActionTime){
-          //Serial.print("Action detected   ");
+          //Serial.print("Action detected   ");  
           //write data form ActionDataFifo[ActionPointerRead]....
-          //a third Fifo ActionKindFifo could be added if nessesary
+          //a third Fifo ActionKindFifo could be added if nessesary 
           if((NrOfActionsDuringStep - 1) > ActionPointerRead){
               ActionPointerRead = ActionPointerRead + 1;
-              //Serial.println(ActionPointerRead);
+              //Serial.println(ActionPointerRead);  
           }else{
               ActionsDuringStep = false;
           }
@@ -563,12 +527,12 @@ void EventHandling(){
                 WriteArray(-30004,Tperiod);
                 TperiodWrite = Tperiod; //remember in order to check if a new value has to be written to Array
                 Tperiod_index = 0;
-                Last = micros()+100;      //see comment SetLastIfStart
+                Last = micros()+100;      //see comment SetLastIfStart										  																	  
                 Waiting4_1stEvent = false;
             }else{                      //end of waiting
                 WaitingTime = millis() - TStartWaiting;
-                WaitingTimeInt = WaitingTime >> 7;
-                if(WaitingTimeInt < 0){WaitingTimeInt = 32767;} //no negative values, max wait 69 min 54 sec,
+                WaitingTimeInt = WaitingTime >> 7;    
+                if(WaitingTimeInt < 0){WaitingTimeInt = 32767;} //no negative values, max wait 69 min 54 sec, 
                                                                 //Error: waiting time saturated at max value
                 WriteArray(-30008,WaitingTimeInt);              //Error when trying to wait longer than 2h33m
                 if(TperiodWrite != Tperiod){    //only write T if changed
@@ -576,11 +540,11 @@ void EventHandling(){
                     TperiodWrite = Tperiod;
                 }
                 Tperiod_index = 0;
-                Last = micros()+100;      //see comment SetLastIfStart
+                Last = micros()+100;      //see comment SetLastIfStart																	  
             }
-        }else if(State == 15){          //STOP and start waiting, write position
+        }else if(State == 15){          //STOP and start waiting, write position 
             RealTimeStop();                     //** eerst gecontroleerd stoppen
-            TStartWaiting = millis();
+            TStartWaiting = millis();   
             Ypos = (YposLong + 2) >> 2;
             Zpos = (ZposLong + 2) >> 2;
             WriteArray(Ypos,Zpos);
@@ -652,7 +616,7 @@ void ReadStepData(int SeqStepNr){
      //Serial.print("  StepDataC1: ");
      //Serial.print(StepDataC1);
      //Serial.print("  StepDataC2: ");
-     //Serial.println(StepDataC2);
+     //Serial.println(StepDataC2);      
      StepNr = StepNr + 1;
 }
 
@@ -662,7 +626,7 @@ void ReadStepData(int SeqStepNr){
 void WriteArray(int C1, int C2){
     int index;
     index = (StepNr - 1) * 2;
-    index = constrain(index,0,SEQlength);   //just to be sure nothing go's (really) wrong
+    index = constrain(index,0,SEQlength);   //just to be shure nothing go's (really) wrong
     SEQ[index] = C1;
     SEQ[index+1] = C2;
     StepNr = StepNr + 1;
@@ -670,7 +634,7 @@ void WriteArray(int C1, int C2){
 
 //Reading RecMode and PlayMode, deriving ManualMode
 //checking mode transitions
-//setting the booleans for the distinction between modes (Rec, Play, Manual) AND
+//setting the boolians for the distinction between modes (Rec, Play, Manual) AND
 //booleans for the 4 allowed mode transitions
 void CheckModeTransition(){
     RecModeRequested = digitalRead(RecPin);                   //which Mode requested?
@@ -683,8 +647,8 @@ void CheckModeTransition(){
     if(RecModeRequested == Requested && PlayMode == Requested){    //first test if the user tries
       ManualMode = Requested;                                      //a transition from Play to Rec
       PlayMode = !Requested;                                       //at once, this will be handled
-      RecMode = !Requested;
-      StopPlayTransition = true;
+      RecMode = !Requested;                                        
+      StopPlayTransition = true;                              
     }else if(PlayModeRequested == Requested && RecMode == Requested){    //idem for Rec to Play
       ManualMode = Requested;
       RecMode = !Requested;
@@ -716,13 +680,13 @@ void CheckModeTransition(){
           ManualMode = Requested;
           RecMode = !Requested;
         }
-      }
+      }    
     }
 }
 
 
 //Wait for the end of a Period T_lapse as passed to the function (if allowed due to acceleration constrains)
-//depends on Last, updates Last
+//depends on Last, updates Last										  
 void Wait4Tperiod(int T_lapse){
     int T_lapseSmooth;
     bool Waiting4T; //for timing of the motor pulses
@@ -737,12 +701,12 @@ void Wait4Tperiod(int T_lapse){
         if(ActionButtonPressed == false){   //if tested true once stop testing during this waiting4Tperiod
             CheckActionButton();        //tested here to prevend slow checking frequency
         }
-    }
+    }                                
 }
 
 //constrain Treq to an Allowed Tperiod called T_Allowed in this function
 //keep shifting the index so next request will approche the requested period with the best value possible
-int SmoothAcc(int Treq){
+int SmoothAcc(int Treq){ 
     int T_Allowed;
     T_Allowed = constrain(Treq,TperiodAllowed[(Tperiod_index+1)],TperiodAllowed[Tperiod_index]); //This T is allowed
     if(Treq > T_Allowed){Tperiod_index = Tperiod_index - 1;}  //if requested outside current interval ...
@@ -765,15 +729,15 @@ void CheckActionButton(){
     }
 }
 
-//** dit moet veranderen: Y en Z afzonderljk uitvoeren: InitZeroY en InitZeroZ....,
-// later zelfs nog verder aanpassen omdat links en rechts appart moeten!
+//** dit moet veranderen: Y en Z afzonderljk uitvoeren: InitZeroY en InitZeroZ...., 
+// later zelfs nog verder aanpassen omdat links en rechts appart moeten! 
 void InitZeroY(){
     Tperiod_index = 0;
     Last = micros();
     do{
         Ydec = Requested; Yinc = !Requested;      //request the propper direction
-        Zdec = !Requested; Zinc = !Requested;
-        CondPulseAndUpdatePos();
+        Zdec = !Requested; Zinc = !Requested; 
+        CondPulseAndUpdatePos();                  
         delayMicroseconds(100);
         digitalWrite(PulseYPin,LOW);
         digitalWrite(PulseZPin,LOW);
@@ -786,26 +750,26 @@ void InitZeroY(){
         delayMicroseconds(100);
         digitalWrite(PulseYPin,LOW);
         digitalWrite(PulseZPin,LOW);
-        Wait4Tperiod(Tslow);
+        Wait4Tperiod(Tslow);  
     }while(Ymin == EndSwitch);
     Stop();
     YposLong = 0;                         //temporary origin
     delay(100);
-    Move2YZ(100,0,Tslow);                 //1mm margin
+    Move2YZ(100,0,Tslow);                 //1mm margin 
     YposLong = 0;                         //Y ORIGIN
     //Serial.println("EXIT InitZero");
 }
 
 
-//** dit moet veranderen: Y en Z afzonderljk uitvoeren: InitZeroY en InitZeroZ....,
-// later zelfs nog verder aanpassen omdat links en rechts appart moeten!
+//** dit moet veranderen: Y en Z afzonderljk uitvoeren: InitZeroY en InitZeroZ...., 
+// later zelfs nog verder aanpassen omdat links en rechts appart moeten! 
 void InitZeroZ(){
     Tperiod_index = 0;
     Last = micros();
     do{
         Ydec = !Requested; Yinc = !Requested;      //request the propper direction
         Zdec = Requested; Zinc = !Requested;      //towards smaller Y and Z
-        CondPulseAndUpdatePos();
+        CondPulseAndUpdatePos();                  
         delayMicroseconds(100);
         digitalWrite(PulseYPin,LOW);
         digitalWrite(PulseZPin,LOW);
@@ -818,11 +782,11 @@ void InitZeroZ(){
         delayMicroseconds(100);
         digitalWrite(PulseYPin,LOW);
         digitalWrite(PulseZPin,LOW);
-        Wait4Tperiod(Tslow);
+        Wait4Tperiod(Tslow);  
     }while(Zmin == EndSwitch);
     Stop();
     ZposLong = 0;                   //temporary origin
-    Move2YZ(0,100,Tslow);                         //1mm margin
+    Move2YZ(0,100,Tslow);                         //1mm margin 
     ZposLong = 0;                   //Z ORIGIN
     //Serial.println("EXIT InitZero");
 }
@@ -837,7 +801,7 @@ void ReadDCState(){                 //Read Direction Control input pins (this is
   Yinc = digitalRead(YincPin);      //4 times switch positions
   Ydec = digitalRead(YdecPin);
   Zinc = digitalRead(ZincPin);
-  Zdec = digitalRead(ZdecPin);
+  Zdec = digitalRead(ZdecPin); 
   State = Yinc + 2 * Ydec + 4 * Zinc + 8 * Zdec;
 //  //Serial.print("DC state read: ");
 //  //Serial.println(State);
@@ -847,14 +811,14 @@ void ReadDCState(){                 //Read Direction Control input pins (this is
 int CalcVel(int U){     //gebruiken we nu eerst even niet, wellicht kan dit gewoon (beina)wel eigenlijk
   int T;
   TperiodOld = Tperiod;
-//  T = 1277913UL / (U+39);   //T max = 32767, T min = 1203
-//  T = 2949456UL / (U+1429);   //T max = 2064, T min = 1202
+//  T = 1277913UL / (U+39);   //T max = 32767, T min = 1203      
+//  T = 2949456UL / (U+1429);   //T max = 2064, T min = 1202	
 //  T = 751752UL / (U+788); 	//T max = 954, T min = 417
 //  T = 246000 / (U+205); //1200 tot 200
   T = 341000UL / (U+341); //T max = 1000, T min = 250
 //  T = 439000UL / (U+439); //T max = 1000. T min = 300
-
-  return T;
+  															  
+  return T;  
 }
 
 //depending on Yinc, Ydec, Zinc and Zdec (read in ReadDCstate) and the endswitches Ymax, Ymin, Zmax and Zmin
@@ -863,27 +827,27 @@ void CondPulseAndUpdatePos(){                       //motor pulses if EndSwitche
   Ymax = digitalRead(YmaxPin);                      //read endswitch
   if(Yinc == Requested && Ymax == NoEndSwitch){     //conditional pulse
     digitalWrite(DirYPin,HIGH);
-    digitalWrite(PulseYPin,HIGH);
+    digitalWrite(PulseYPin,HIGH); 
     YposLong = YposLong + 1;                                //and: update position
   }
-  Ymin = digitalRead(YminPin);
+  Ymin = digitalRead(YminPin);    
   if(Ydec == Requested && Ymin == NoEndSwitch){
     digitalWrite(DirYPin,LOW);
-    digitalWrite(PulseYPin,HIGH);
-    YposLong = YposLong - 1;
-  }
+    digitalWrite(PulseYPin,HIGH); 
+    YposLong = YposLong - 1; 
+  }  
   Zmax = digitalRead(ZmaxPin);
   if(Zinc == Requested && Zmax == NoEndSwitch){
     digitalWrite(DirZPin,LOW);
     digitalWrite(PulseZPin,HIGH);
-    ZposLong = ZposLong + 1;
+    ZposLong = ZposLong + 1;  
   }
-  Zmin = digitalRead(ZminPin);
+  Zmin = digitalRead(ZminPin);  
   if(Zdec == Requested && Zmin == NoEndSwitch){
     digitalWrite(DirZPin,HIGH);
-    digitalWrite(PulseZPin,HIGH);
+    digitalWrite(PulseZPin,HIGH);  
     ZposLong = ZposLong - 1;
-  }
+  }		 
 }
 
 //depending on Yinc, Ydec, Zinc and Zdec (read in ReadDCstate) and the endswitches Ymax, Ymin, Zmax and Zmin
@@ -892,72 +856,25 @@ void CondPulseEtc_RT(){                       //motor pulses if EndSwitches NOT 
   Ymax = digitalRead(YmaxPin);                      //read endswitch
   if(YincOld == Requested && Ymax == NoEndSwitch){     //conditional pulse
     digitalWrite(DirYPin,HIGH);
-    digitalWrite(PulseYPin,HIGH);
+    digitalWrite(PulseYPin,HIGH); 
     YposLong = YposLong + 1;                                //and: update position
   }
-  Ymin = digitalRead(YminPin);
+  Ymin = digitalRead(YminPin);    
   if(YdecOld == Requested && Ymin == NoEndSwitch){
     digitalWrite(DirYPin,LOW);
-    digitalWrite(PulseYPin,HIGH);
-    YposLong = YposLong - 1;
-  }
+    digitalWrite(PulseYPin,HIGH); 
+    YposLong = YposLong - 1; 
+  }  
   Zmax = digitalRead(ZmaxPin);
   if(ZincOld == Requested && Zmax == NoEndSwitch){
     digitalWrite(DirZPin,LOW);
     digitalWrite(PulseZPin,HIGH);
-    ZposLong = ZposLong + 1;
+    ZposLong = ZposLong + 1;  
   }
-  Zmin = digitalRead(ZminPin);
+  Zmin = digitalRead(ZminPin);  
   if(ZdecOld == Requested && Zmin == NoEndSwitch){
     digitalWrite(DirZPin,HIGH);
-    digitalWrite(PulseZPin,HIGH);
+    digitalWrite(PulseZPin,HIGH);  
     ZposLong = ZposLong - 1;
-  }
-}
-
-//Functions for Serial Communication
-
-//Receive array from java service:
-// 1) receives a set of characters from the pc and adds them to String temp until end of line is reached (/n)
-// 2) converts String temp to int and adds the int to the SEQ array
-// Note if the string is not an integer (+/-) 0 will be added to the array, from the java service this has been taken into consideration
-// and only integers will be send to the arduino.
-void receiveArray() {
-  while (Serial.available() && receiveArrayFromPC) {
-    receiveCharacter();
-  }
-}
-
-void receiveCharacter() {
-  char inChar = Serial.read();
-  if (inChar != -1) {
-    //    timeOutReceiveFromPC = 0;
-    String temp = String(inChar);
-    readString += temp;
-
-    if (inChar == '\n') {
-      SEQ[ReadNr] = readString.toInt();
-
-      if (readString.equals("-32000\n")) { //end of array turning off reading from array
-        receiveArrayFromPC = false;
-      }
-      ReadNr = ReadNr + 1;
-      readString = "";
-    }
-  }
-}
-
-// Sends array to java service:
-// 1) Loops over SEQ array and prints it to the serial port until -32000 is reached
-// 2) Breaks out of loop and sets sendArrayTPC boolean to false
-void sendArray() {
-  Serial.print("Send_Array");
-  for (int i = 0; i <  SEQlength; i++) {
-    Serial.print(SEQ[i]);
-    if (SEQ[i] == -32000) {
-      break;
-    }
-    Serial.print(',');
-  }
-  sendArrayToPC = false;
+  }     
 }
