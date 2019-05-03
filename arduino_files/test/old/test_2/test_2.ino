@@ -4,7 +4,7 @@ int ReadNr = 0;
 String readString;
 
 void setup() {
-  Serial.begin(9600); // start serial
+  Serial.begin(115200); // start serial
   Serial.println("<Arduino is ready>");
 }
 

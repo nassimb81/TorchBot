@@ -1,3 +1,8 @@
+//Mode and OldMode did not speed up CheckModeTransition()
+//maximum speed is now limmited by the amount of computations between subsequent motor pulses
+//that is why I decided to perform [CeckModeTransition and CalcVel] OR [analogRead] at half the frequency
+//this has to be done in both real time situations: Rec and Manual
+//
 //pin numbers 
 const int YincPin = 23; //Y+ (pin number)
 const int YdecPin = 25; //Y-
@@ -51,6 +56,7 @@ long int YposLong;
 long int ZposLong;
 
 int VelPotU;  //read from analog input
+int CaseNr = 0;
 int Tperiod;  //pulse timing
 int TperiodOld;
 int TperiodWrite;
@@ -71,8 +77,6 @@ int NextRequested;
 int ManualMode;  //the system always is in one of these modes as a result of CheckModeTransition()
 int PlayMode;  //idem
 int RecMode;   //idem
-int Mode = 0;      //Rec or Play Mode,used to speed up CheckModeTransition;
-int OldMode = 0; 
 bool StopRecTransition; //the four possible (allowed) mode transitions
 bool StopPlayTransition;
 bool StartRecTransition;
@@ -197,6 +201,7 @@ void loop() {
       //start writing from StepNr 1
       StartRecTransition = false;
       StepNr = 1; 
+	    ActionButtonPressed = false;						  
       ActionNr = 0;
       WriteArray(-31000,0);          //-31000: begin of Array mark 
       Ypos = (YposLong + 2) >> 2;
@@ -230,30 +235,38 @@ void loop() {
       if(ManualMode == Requested){              //This if else if construction results in performing a transition 
                                          //before entering a while loop for the current Mode (Play, Rec, Manual)
           State = 15;   //**is dit nodig  ja?                  //enter manual mode while waiting	
-          Last = micros(); //**is dit nodig NEE
+          CaseNr = 0;   //always do a analogRead before CalcVel
           //Serial.println("entering ManualMode");									
           while(ManualMode == Requested){           //while Rec / Play switch in Manual position
               ReadDCState();                   //Read Direction Control input pins and calculate State             
               StateChangeExeptions();		//was SetLastIfStart, nu wordt daar ook het stoppen geregeld	   
               CondPulseAndUpdatePos();         //give pulses if no EndSwitch is active And update position
-              VelPotU = analogRead(VelPotPin); //in the Manual mode the speed can be controlled
-              Tperiod = CalcVel(VelPotU);
+              CaseNr = CaseNr + 1;
+              switch(CaseNr){
+                case 1:
+                  VelPotU = analogRead(VelPotPin); //in the Manual mode the speed can be controlled
+                  break;
+                case 2:
+                  Tperiod = CalcVel(VelPotU);
+                  CheckModeTransition();           //End one Mode and Start an other Mode if requested
+                  if(digitalRead(ActionPin) == LOW){
+                       digitalWrite(EnableYPin,LOW);      //Disable motors for manual corrections of Y and Z position
+                       digitalWrite(EnableZPin,LOW);      //
+                  }else{
+                       digitalWrite(EnableYPin,HIGH);      //motors are Enabled
+                       digitalWrite(EnableZPin,HIGH); 
+                  }
+                  if(digitalRead(HomePin)==Requested){
+                        Move2YZ(800,800,Tmoderate);
+                        InitZeroY();
+                        InitZeroZ();
+                  }
+                  CaseNr = 0;                     //next time do an analogRead
+                  break;
+              }              
               digitalWrite(PulseYPin,LOW);
               digitalWrite(PulseZPin,LOW);
               Wait4Tperiod(Tperiod);            
-              CheckModeTransition();           //End one Mode and Start an other Mode if requested
-              if(digitalRead(ActionPin) == LOW){
-                   digitalWrite(EnableYPin,LOW);      //Disable motors for manual corrections of Y and Z position
-                   digitalWrite(EnableZPin,LOW);      //
-              }else{
-                   digitalWrite(EnableYPin,HIGH);      //motors are Enabled
-                   digitalWrite(EnableZPin,HIGH); 
-              }
-              if(digitalRead(HomePin)==Requested){
-                    Move2YZ(800,800,Tmoderate);
-                    InitZeroY();
-                    InitZeroZ();
-              }
           } 
 //==================================================================================================================          
       }else if(PlayMode == Requested){           //This if else if construction results in performing a transition 
@@ -304,19 +317,26 @@ void loop() {
       }else if(RecMode == Requested){            //This if else if construction results in performing a transition 
                                             //before entering a while loop for the current Mode (Play, Rec, Manual)
           State = 15;       
-          OldState = 15;                          //possibbly unnacessary
+          CaseNr = 0;
           //Serial.println("entering Rec mode");  									 
           while(RecMode == Requested){           //while Rec / Play switch in Manual position
               ReadDCState();                   //Read Direction Control input pins and calculate State
               EventHandling();                 //also sets Last in case of starting a movement
               CondPulseAndUpdatePos();         //give pulses if no EndSwitch is active And update position
-              VelPotU = analogRead(VelPotPin); //in the Manual mode the speed can be controlled
-              Tperiod = CalcVel(VelPotU);
-              //Tperiod = 534;
+              CaseNr = CaseNr + 1;
+              switch(CaseNr){                 //less computation by slowing down the rates off:
+                case 1:
+                  VelPotU = analogRead(VelPotPin); //reading of analog speed setpoint
+                  break;
+                case 2:
+                  Tperiod = CalcVel(VelPotU);     //calculation of Tperiod and
+                  CheckModeTransition();          //End one Mode and Start an other Mode if requested
+                  CaseNr = 0;                     //next time do an analogRead
+                  break;
+              }
               digitalWrite(PulseYPin,LOW);
               digitalWrite(PulseZPin,LOW);
               Wait4Tperiod(Tperiod);            
-              CheckModeTransition();           //End one Mode and Start an other Mode if requested
           }
       } 
   }
@@ -617,11 +637,8 @@ void WriteArray(int C1, int C2){
 //setting the boolians for the distinction between modes (Rec, Play, Manual) AND
 //booleans for the 4 allowed mode transitions
 void CheckModeTransition(){
-  OldMode = Mode;
-  RecModeRequested = digitalRead(RecPin);                   //which Mode requested?
-  PlayModeRequested = digitalRead(PlayPin);
-  Mode = RecModeRequested + 2 * PlayModeRequested;
-  if(OldMode != Mode){
+    RecModeRequested = digitalRead(RecPin);                   //which Mode requested?
+    PlayModeRequested = digitalRead(PlayPin);
     if(RecModeRequested == !Requested && PlayModeRequested == !Requested){
       ManualModeRequested = Requested;
     }else{
@@ -665,7 +682,6 @@ void CheckModeTransition(){
         }
       }    
     }
-  }
 }
 
 
@@ -799,8 +815,8 @@ int CalcVel(int U){     //gebruiken we nu eerst even niet, wellicht kan dit gewo
 //  T = 2949456UL / (U+1429);   //T max = 2064, T min = 1202	
 //  T = 751752UL / (U+788); 	//T max = 954, T min = 417
 //  T = 246000 / (U+205); //1200 tot 200
-//  T = 341000UL / (U+341); //T max = 1000, T min = 250
-  T = 439000UL / (U+439);
+  T = 341000UL / (U+341); //T max = 1000, T min = 250
+//  T = 439000UL / (U+439); //T max = 1000. T min = 300
   															  
   return T;  
 }
