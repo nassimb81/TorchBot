@@ -32,6 +32,7 @@ public class FileService {
         log.info("Saving File !");
         log.info("Array will be stored in output file");
         int startArray = array.indexOf(ARDUINO_SAVE_KEYWORD);
+        log.info("Int start array is {}", startArray);
         int lengthSender = ARDUINO_SAVE_KEYWORD.length();
 
         try {
@@ -44,11 +45,12 @@ public class FileService {
             File file = new File(dir, fileName);
 
             BufferedWriter writer = new BufferedWriter(new FileWriter(file));
-            writer.write(array);
+            writer.write(stringSeq);
             writer.close();
 
             fileNameCurrentlyImportedArray = fileName;
             log.info("Temporary imported file: {}", fileNameCurrentlyImportedArray);
+            exportFileTemp(stringSeq);
         } catch (IOException ioEx) {
             log.error("Error thrown during saving of the temporary array from the arduino");
         }

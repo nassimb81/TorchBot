@@ -124,8 +124,11 @@ long int Zdestination;
 String readString;  //string to store characters from serial communication up to end of line (eol)
 bool receiveArrayFromPC;
 bool sendArrayToPC;
+bool javaConnected;
 int ReadNr;
 int timeOutReceiveFromPC;
+bool wait4Reply;
+unsigned long timeW4Reply;
 
 int teller;
 
@@ -175,9 +178,11 @@ void setup() {
 
   Serial.println("<Arduino is ready>");
   ReadNr = 0;
-  receiveArrayFromPC = true;
-  sendArrayToPC = true;
   timeOutReceiveFromPC = 0;
+  javaConnected = false;
+  Serial.print("Java Connected is:");
+  Serial.println(javaConnected);
+  Serial.flush();
 }
 
 
@@ -187,26 +192,17 @@ void loop() {
   if (StartPlayTransition == true) {  //code to be executed until transition completed ===========================
     //get array from Java-API
     // Only goes into receiveArray when a Byte is send
-    Serial.print("Receiving_Array");
-    
-
-    while (timeOutReceiveFromPC < 200 && receiveArrayFromPC) {
-      delay(100);
+    Serial.print("Serial Connection Tested");
+    if (checkArduinoConnection()) {
+      Serial.print("Receiving_Array");
       receiveArray();
-      timeOutReceiveFromPC = timeOutReceiveFromPC + 1;
     }
 
     Serial.println("Out of while loop");
-
-    Serial.println("timeoutReceiveFromPC");
-    Serial.println(timeOutReceiveFromPC);
-    Serial.println("receiveArrayFromPC");
-    Serial.println(receiveArrayFromPC);
-
     StartPlayTransition = false;
 
-    //go to startpoint (with moderate speed), set speed to value from Array
-    //Serial.println("StartPlayTransition");
+    //    go to startpoint (with moderate speed), set speed to value from Array
+    Serial.println("StartPlayTransition");
     teller = 1;
     do {
       ReadStepData(teller);
@@ -236,7 +232,6 @@ void loop() {
   } else if (StartRecTransition == true) { //code to be executed until transition completed========================
     //start writing from StepNr 1
     StartRecTransition = false;
-    sendArrayToPC = true;
     StepNr = 1;
     ActionButtonPressed = false;
     ActionNr = 0;
@@ -269,7 +264,7 @@ void loop() {
     }
     WriteArray(-32000, 0); //marking the end of a Sequence (Array)
     //write Array to PC (if connected)
-    if (sendArrayToPC) {
+    if (checkArduinoConnection()) {
       sendArray();
     }
     //just stay where you are!
@@ -281,10 +276,6 @@ void loop() {
       State = 15;   //**is dit nodig  ja?                  //enter manual mode while waiting
       CaseNr = 0;   //always do a analogRead before CalcVel
       //Serial.println("entering ManualMode");
-
-      //Reset Serial Communication Variables
-      receiveArrayFromPC = true;
-      timeOutReceiveFromPC = 0;
 
       while (ManualMode == Requested) {         //while Rec / Play switch in Manual position
         ReadDCState();                   //Read Direction Control input pins and calculate State
@@ -950,29 +941,36 @@ void CondPulseEtc_RT() {                      //motor pulses if EndSwitches NOT 
 // Note if the string is not an integer (+/-) 0 will be added to the array, from the java service this has been taken into consideration
 // and only integers will be send to the arduino.
 void receiveArray() {
-  while (Serial.available() && receiveArrayFromPC) {
-    receiveCharacter();
+  wait4Reply = true;
+  timeW4Reply = millis();
+  ReadNr = 0;
+  while (wait4Reply) {
+    receiveLine();
   }
 }
 
-void receiveCharacter() {
-  char inChar = Serial.read();
-  if (inChar != -1) {
-    //    timeOutReceiveFromPC = 0;
-    String temp = String(inChar);
-    readString += temp;
+void receiveLine() {
+  if (Serial.available() > 0) {
+    char inChar = Serial.read();
+    if (inChar != -1) {
+      String temp = String(inChar);
+      readString += temp;
 
-    if (inChar == '\n') {
-      SEQ[ReadNr] = readString.toInt();
-
-      if (readString.equals("-32000\n")) { //end of array turning off reading from array
-        receiveArrayFromPC = false;
+      if (inChar == '\n') {
+        SEQ[ReadNr] = readString.toInt();
+        if (readString.equals("-32000\n")) { //end of array turning off reading from array
+          wait4Reply = false;
+        }
+        ReadNr = ReadNr + 1;
+        readString = "";
       }
-      ReadNr = ReadNr + 1;
-      readString = "";
     }
   }
+  if ((millis() - timeW4Reply) > 6000 & wait4Reply == true) {
+    wait4Reply = false;
+  }
 }
+
 
 // Sends array to java service:
 // 1) Loops over SEQ array and prints it to the serial port until -32000 is reached
@@ -986,5 +984,40 @@ void sendArray() {
     }
     Serial.print(',');
   }
-  sendArrayToPC = false;
+}
+
+bool checkArduinoConnection() {
+  Serial.print("java_available");
+
+  wait4Reply = true;
+  timeW4Reply = millis();
+
+  while (wait4Reply) {
+    if (Serial.available() > 0) {
+      char inChar = Serial.read();
+      if (inChar != -1) {
+        String temp = String(inChar);
+        readString += temp;
+        if (inChar == '\n') {
+          if (readString.equals("arduino_message_received\n") ) {
+            javaConnected = true;
+            wait4Reply = false;
+          } else {
+            wait4Reply = false;
+          }
+        }
+      }
+    }
+
+    if ((millis() - timeW4Reply) > 6000 & wait4Reply == true) {
+      javaConnected = false;
+      wait4Reply = false;
+    }
+  }
+
+  Serial.print("Java Connected is:");
+  Serial.println(javaConnected);
+  
+  readString = "";
+  return javaConnected;
 }
